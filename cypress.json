@@ -1,0 +1,14 @@
+{
+  "viewportWidth": 1366,
+  "viewportHeight": 768,
+  "baseUrl": "http://192.168.35.192/smp/",
+  "env": {
+    "webApi": "http://192.168.35.192/smp-webapi"
+  },
+  "db": {
+    "user": "a",
+    "password": "a",
+    "server": "192.168.35.199\\DEV",
+    "database": "smp"
+  }
+}
