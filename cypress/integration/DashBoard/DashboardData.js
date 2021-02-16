@@ -1,7 +1,7 @@
 const admin = Cypress.env('mainOrgAdmin');
 const webApi = Cypress.env('webApi');
 
-const usersQuery = `SELECT * FROM Identities WHERE  accountid=${admin.accountId} AND IsDeleted=0 AND isBanned=0;`;
+const usersQuery = `SELECT * FROM Identities WHERE  accountid=${admin.accountId} AND IsDeleted=0`;
 
 const totalDevicesQuery = `SELECT * FROM LogicDevicePoints ldp JOIN Agents a ON a.Id = ldp.AgentId 
 WHERE a.AccountId = ${admin.accountId} 
@@ -24,6 +24,7 @@ JOIN MinutelyAggregatedValues agr ON agr.SupportedDeviceId = pp.SupportedDeviceI
 JOIN LogicDevicePoints ldp ON ldp.Id = agr.LogicDevicePointId
 JOIN Agents a ON a.Id = ldp.AgentId
 WHERE ldp.AgentId IN (Select id FROM Agents WHERE AccountId=${admin.accountId})
+AND pp.AccountId=${admin.accountId}
   AND agr.SupportedDeviceId NOT IN (0, 1000000)`;
 
 
