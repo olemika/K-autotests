@@ -13,12 +13,34 @@ const groupsQuery = `SELECT Name
 FROM DeviceGroups 
 WHERE AccountId = ${admin.accountId} `
 
+
+function sortAsc(a, b) {
+    if (a > b) {
+        return 1;
+    }
+    if (a < b) {
+        return -1;
+    }
+    return 0;
+}
+
+
+function compareIPAddresses(a, b) {
+    const numA = Number(
+        a.split('.')
+            .map((num, idx) => num * Math.pow(2, (3 - idx) * 8))
+            .reduce((a, v) => ((a += v), a), 0)
+    );
+    const numB = Number(
+        b.split('.')
+            .map((num, idx) => num * Math.pow(2, (3 - idx) * 8))
+            .reduce((a, v) => ((a += v), a), 0)
+    );
+    return numA - numB;
+}
+
 describe("Check all elements", function () {
     let newToken;
-    let deviceNames = [];
-    let ipAdresses = [];
-    let directions = [];
-    let deviceGroups = new Set();
 
     before(() => {
         cy.getWebApiToken(admin).then((result) => {
@@ -33,6 +55,7 @@ describe("Check all elements", function () {
     })
 
     it("Check groups names", function () {
+        let deviceGroups = new Set();
 
         cy.task('queryDatabase', groupsQuery)
             .then((res) => {
@@ -53,41 +76,131 @@ describe("Check all elements", function () {
     })
 
     it("Check sort of device's names", function () {
-        let sizeOnFront;
-        cy.request({
-            method: 'POST',
-            url: `${webApi}/v3/device/list`,
-            headers: {
-                AccountId: admin.accountId,
-                Accept: 'application/json',
-                Authorization: "Bearer " + newToken
-            },
-            body: { "filters": { "disabled": [false] }, "sort": [], "pagination": { "start": 0, "end": 9 } }
-        }).then((response) => {
+        //descending 
+        cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[1]/button').click();
+        cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[1]/button/span[2]')
+            .should('have.attr', 'data-value', 'desc');
 
-            console.log(response.body)
-            
-        })
+        cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/div[2]')
+            .children()
+            .then((kids) => {
+                let deviceNames = new Array();
 
-        cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/div[2]').children().its('length').then((val) => {
-            sizeOnFront = val;
-        });
+                for (let i = 0; i < kids.length; i++) {
+                    deviceNames.push(kids[i].querySelector('h6').innerText.toLowerCase())
+                }
+                let copyDeviceNames = deviceNames.slice();
 
-      //  for (let i = 0; i <= sizeOnFront; i++) {
-            // cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/div[2]').children().then((kids) => {
-                
-            //     for(let i = 0; i < sizeOnFront; i++) {
-            //         cy.get(kids[i]).find('h6').then(($span) => {
-            //             let text = $span.text()
-            //             deviceNames.push(text)
-            //         })
-                   
-            //     }
-            //     console.log("dn size "+ deviceNames.length + " --- " + deviceNames)
-            // })
-            
-            
-      //  }
-        
+                copyDeviceNames.sort(sortAsc)
+                copyDeviceNames.reverse();
+
+                expect(copyDeviceNames.join('')).to.equal(deviceNames.join(''))
+
+            });
+
+
+        cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[1]/button').click();
+        cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[1]/button/span[2]')
+            .should('have.attr', 'data-value', 'asc');
+
+
+        cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/div[2]')
+            .children()
+            .then((kids) => {
+                let deviceNames = new Array();
+
+                for (let i = 0; i < kids.length; i++) {
+                    deviceNames.push(kids[i].querySelector('h6').innerText.toLowerCase())
+                }
+                let copyDeviceNames = deviceNames.slice();
+
+                copyDeviceNames.sort(sortAsc)
+
+                expect(copyDeviceNames.join('')).to.equal(deviceNames.join(''))
+            })
+
+        cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/button').click();
     })
+
+    it('Sorting by ip address', () => {
+        //desc
+        cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[2]/button')
+            .click()
+            .then(() => {
+                cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[2]/button/span[2]')
+                    .should('have.attr', 'data-value', 'desc')
+            })
+        cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/div[2]')
+            .children()
+            .then((kids) => {
+                let ipAdresses = new Array();
+                // p:nth-child(10)
+                for (let i = 0; i < kids.length; i++) {
+                    ipAdresses.push(kids[i].querySelector('.selectable p:nth-child(1)').innerText)
+                }
+
+                console.log(ipAdresses)
+
+                let copyIP = ipAdresses.slice();
+
+                copyIP.sort(compareIPAddresses)
+                copyIP.reverse();
+
+                expect(copyIP.join(';')).to.equal(ipAdresses.join(';'))
+            })
+        //asc
+        cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[2]/button')
+            .click().then(() => {
+                cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[2]/button/span[2]')
+                    .should('have.attr', 'data-value', 'asc')
+            })
+
+        cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/div[2]')
+            .children()
+            .then((kids) => {
+                let ipAdresses = new Array();
+
+                for (let i = 0; i < kids.length; i++) {
+                    ipAdresses.push(kids[i].querySelector('.selectable p:nth-child(1)').innerText)
+                }
+
+                console.log(ipAdresses)
+
+                let copyIP = ipAdresses.slice();
+
+                copyIP.sort(compareIPAddresses)
+
+                expect(copyIP.join(';')).to.equal(ipAdresses.join(';'))
+            })
+        cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/button')
+            .click();
+    })
+
+    //Ждем доработку Артема
+    it('Sorting by direction', () => { 
+    
+        cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[3]/button')
+            .click()
+            .then(() => {
+                cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[3]/button/span[2]')
+                    .should('have.attr', 'data-value', 'desc')
+            })
+        cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/div[2]')
+            .children()
+            .then((kids) => {
+                let directions = new Array();
+                for (let i = 0; i < kids.length; i++) {
+                    directions.push(kids[i].querySelectorAll('li')[2].querySelector('p').innerText)
+                }
+                console.log("directins " + directions)
+                let copyDirections = directions.slice();
+                copyDirections.sort(sortAsc)
+                copyDirections.reverse();
+                expect(copyDirections.join(';')).to.equal(directions.join(';'))
+            })
+        cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/button')
+            .click();
+    })
+
+
 })
