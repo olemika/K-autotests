@@ -8,53 +8,66 @@ AND a.Deleted=0
 AND ldp.Disabled=0
 AND ldp.Deleted=0`;
 
+const directionQuery = `SELECT ldp.id, ISNULL(ds.Value, ' ') AS Value
+FROM LogicDevicePoints ldp 
+LEFT OUTER JOIN (SELECT * FROM  DeviceStates  WHERE  SemanticId = '66CE66FF-E3A3-4D02-AB81-3BE3518EB450') ds  ON ldp.Id = ds.LogicDevicePointId
+LEFT OUTER  JOIN Semantics s ON s.id = ds.SemanticId
+LEFT OUTER  JOIN Agents a ON a.Id = ldp.AgentId
+WHERE ldp.Deleted=0 AND ldp.Disabled=0
+AND a.AccountId=${admin.accountId}
+ORDER BY ds.Value`
 
 const groupsQuery = `SELECT Name
 FROM DeviceGroups 
 WHERE AccountId = ${admin.accountId} `
 
-// function MySort(alphabet)
-// {
-//     return function(a, b) {
-//         var index_a = alphabet.indexOf(a[0]),
-//         index_b = alphabet.indexOf(b[0]);
+const ipAdressQuery = `SELECT ldp.id, ISNULL(ds.Value, ' ') AS Value, s.Name
+FROM LogicDevicePoints ldp 
+LEFT OUTER JOIN (SELECT * FROM  DeviceStates  WHERE  SemanticId = '40EB7178-7EAF-48F4-AC2A-6DD1052A1EFB' AND Reliability=1) ds  ON ldp.Id = ds.LogicDevicePointId
+LEFT OUTER  JOIN Semantics s ON s.id = ds.SemanticId
+LEFT OUTER  JOIN Agents a ON a.Id = ldp.AgentId
+WHERE ldp.Deleted=0 AND ldp.Disabled=0
+AND a.AccountId=${admin.accountId}
+ORDER BY ds.Value`
 
-//         if (index_a === index_b) {
-//             // same first character, sort regular
-//             if (a < b) {
-//                 return -1;
-//             } else if (a > b) {
-//                 return 1;
-//             }
-//             return 0;
-//         } else {
-//             return index_a - index_b;
-//         }
-//     }
-// }
+const tonerQuery = ` SELECT ldp.id, ISNULL(ds.Value, '0') AS Value 
+FROM LogicDevicePoints ldp 
+LEFT OUTER JOIN (SELECT LogicDevicePointId, MIN(Value) AS Value FROM  DeviceStates  WHERE ColumnId=4 GROUP BY LogicDevicePointId) ds  ON ldp.Id = ds.LogicDevicePointId
+LEFT OUTER  JOIN Agents a ON a.Id = ldp.AgentId
+WHERE ldp.Deleted=0 AND ldp.Disabled=0
+AND a.AccountId=${admin.accountId}
+ORDER BY ds.Value`
+
+function MySort(alphabet) {
+    return function (a, b) {
+        var index_a = alphabet.indexOf(a[0]),
+            index_b = alphabet.indexOf(b[0]);
+
+        if (index_a === index_b) {
+            // same first character, sort regular
+            if (a < b) {
+                return -1;
+            } else if (a > b) {
+                return 1;
+            }
+            return 0;
+        } else {
+            return index_a - index_b;
+        }
+    }
+}
 
 
-// function sortAsc(a, b) {
-//     const digitRegex = /^\d/;
-//     const alphabetRegex = /^[a-zA-Z]/;
-//     const symbolRegex = /^[^\w\s]/;
-//     const alphabetRus = /^[а-яА-Я]/;
-    
-//     const scoreA =  symbolRegex.test(a) * 1 || digitRegex.test(a) * 10 || alphabetRegex.test(a) * 100 || alphabetRus.test(a) * 1000;
-//     const scoreB =  symbolRegex.test(b) * 1 || digitRegex.test(b) * 10 || alphabetRegex.test(b) * 100 || alphabetRus.test(b) * 1000;
-    
-//     if (scoreA !== scoreB) {
-//       return scoreA - scoreB;
-//     }
-    
-//     if (a < b) {
-//       return -1;
-//     } else if (a > b) {
-//       return 1;
-//     }
-//     return 0;
-// }
-const sortAsc = MySort(' 01234567989/\\*!@_.()#^&%-=+abcdefghijklmnopqrstuvwxyzабвгдеёжзийклмнопрстуфхцчшщъыьэюя');
+ function sortAsc(a, b) {
+  if (a > b) {
+    return 1;
+  }
+  if (a < b) {
+    return -1;
+  }
+  return 0;
+}
+//const sortAsc = MySort(' \'-!"#$%&()*,./:;?@[\\]^_`{|}~+<=>№01234567989aAbBcCdDeEfFgGhHiIjJkKlLmMnNoOpPqQrRsStTuUvVwWxXyYzZаАбБвВгГдДеЕёЁжЖзЗиИйЙкКлЛмМнНоОпПрРсСтТуУфФхХцЦчЧшШщЩъЪыЫьЬэЭюЮяЯ');
 
 function compareIPAddresses(a, b) {
     const numA = Number(
@@ -70,7 +83,7 @@ function compareIPAddresses(a, b) {
     return numA - numB;
 }
 
-describe("Check all elements", function () {
+describe("Check sort", function () {
     let newToken;
 
     before(() => {
@@ -130,6 +143,10 @@ describe("Check all elements", function () {
             });
 
 
+       
+    })
+
+    it("Sorting by device's names asc", () => {
         cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[1]/button').click();
         cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[1]/button/span[2]')
             .should('have.attr', 'data-value', 'asc');
@@ -147,13 +164,17 @@ describe("Check all elements", function () {
 
                 copyDeviceNames.sort(sortAsc)
 
-               // expect(copyDeviceNames.join(';')).to.equal(deviceNames.join(';'))
+                expect(copyDeviceNames.join(';')).to.equal(deviceNames.join(';'))
             })
 
         cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/button').click();
     })
 
     it('Sorting by ip address desc', () => {
+
+        cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/ul/li[4]/button').click({ force: true }).then(() => {
+            cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/ul/li[4]/ul/li[1]/button').click({ force: true });
+        })
         //desc
         cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[2]/button')
             .click()
@@ -164,56 +185,82 @@ describe("Check all elements", function () {
         cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/div[2]')
             .children()
             .then((kids) => {
-                let ipAdresses = new Array();
-                // p:nth-child(10)
+                let ipAdressesFront = new Array();
+
                 for (let i = 0; i < kids.length; i++) {
-                    ipAdresses.push(kids[i].querySelector('.selectable p:nth-child(1)').innerText)
+
+                    if (kids[i].querySelector('.selectable p:nth-child(1)').getAttribute('data-reliability') == "false") {
+                        ipAdressesFront.push(' ')
+                    } else {
+                        ipAdressesFront.push(kids[i].querySelector('.selectable p:nth-child(1)').innerText)
+                    }
+
                 }
 
-                console.log(ipAdresses)
+                cy.task('queryDatabase', ipAdressQuery)
+                    .then((val) => {
+                        let ipAdressesDB = new Array();
 
-                let copyIP = ipAdresses.slice();
+                        for (let i = 0; i < kids.length; i++) {
+                            ipAdressesDB.push(val.recordset[i]['Value'])
+                        }
+                        ipAdressesDB.sort(compareIPAddresses);
+                        ipAdressesDB.reverse();
+                        expect(ipAdressesDB.join(';')).to.equal(ipAdressesFront.join(';'))
+                    })
 
-                copyIP.sort(compareIPAddresses)
-                copyIP.reverse();
-
-                expect(copyIP.join(';')).to.equal(ipAdresses.join(';'))
             })
-      
-       
     })
 
     it('Sorting by ip address asc', () => {
+        cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/ul/li[4]/button').click({ force: true }).then(() => {
+            cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/ul/li[4]/ul/li[1]/button').click({ force: true });
+        })
+
         cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[2]/button')
-        .click().then(() => {
-            cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[2]/button/span[2]')
-                .should('have.attr', 'data-value', 'asc')
-        })
+            .click().then(() => {
+                cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[2]/button/span[2]')
+                    .should('have.attr', 'data-value', 'asc')
+            })
 
-    cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/div[2]')
-        .children()
-        .then((kids) => {
-            let ipAdresses = new Array();
+        cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/div[2]')
+            .children()
+            .then((kids) => {
+                let ipAdressesFront = new Array();
+                // p:nth-child(10)
+                for (let i = 0; i < kids.length; i++) {
 
-            for (let i = 0; i < kids.length; i++) {
-                ipAdresses.push(kids[i].querySelector('.selectable p:nth-child(1)').innerText)
-            }
+                    if (kids[i].querySelector('.selectable p:nth-child(1)').getAttribute('data-reliability') == "false") {
+                        ipAdressesFront.push(' ')
+                    } else {
+                        ipAdressesFront.push(kids[i].querySelector('.selectable p:nth-child(1)').innerText)
+                    }
 
-            console.log(ipAdresses)
+                }
 
-            let copyIP = ipAdresses.slice();
+                cy.task('queryDatabase', ipAdressQuery)
+                    .then((val) => {
+                        let ipAdressesDB = new Array();
 
-            copyIP.sort(compareIPAddresses)
+                        for (let i = 0; i < kids.length; i++) {
+                            ipAdressesDB.push(val.recordset[i]['Value'])
+                        }
+                        ipAdressesDB.sort(compareIPAddresses);
 
-            expect(copyIP.join(';')).to.equal(ipAdresses.join(';'))
-        })
-    cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/button')
-        .click();
+                        expect(ipAdressesDB.join(';')).to.equal(ipAdressesFront.join(';'))
+                    })
 
+                cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/button')
+                    .click();
+
+            })
     })
 
     //Ждем доработку Артема
     it('Sorting by direction desc', () => {
+        cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/ul/li[4]/button').click({ force: true }).then(() => {
+            cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/ul/li[4]/ul/li[1]/button').click({ force: true });
+        })
 
         cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[3]/button')
             .click()
@@ -222,22 +269,43 @@ describe("Check all elements", function () {
                     .should('have.attr', 'data-value', 'desc')
             })
 
+
+
+
+
         cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/div[2]')
             .children()
             .then((kids) => {
-                let directions = new Array();
+                let directionsFront = new Array();
                 for (let i = 0; i < kids.length; i++) {
-                    directions.push(kids[i].querySelectorAll('li')[2].querySelector('p').innerText)
+                    directionsFront.push(kids[i].querySelectorAll('li')[2].querySelector('p').innerText)
                 }
-                console.log("directins " + directions)
-                let copyDirections = directions.slice();
-                copyDirections.sort(sortAsc)
-                copyDirections.reverse();
-              //  expect(copyDirections.join(';')).to.equal(directions.join(';'))
+                console.log('directionsFront ' + directionsFront)
+                console.log("kids length =", kids.length)
+                cy.task('queryDatabase', directionQuery)
+                    .then((val) => {
+                        let directionsDB = new Array();
+                        console.log(val)
+                        for (let i = 0; i < kids.length; i++) {
+                            directionsDB.push(val.recordset[i]['Value'])
+                        }
+
+                        console.log("directins " + directionsDB)
+
+                        directionsDB.reverse();
+                        expect(directionsFront.join(';')).to.equal(directionsDB.join(';'))
+
+                    })
+
             })
     })
 
     it('Sorting by direction asc', () => {
+        cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/ul/li[4]/button').click({ force: true }).then(() => {
+            cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/ul/li[4]/ul/li[1]/button').click({ force: true });
+        })
+
+     
         cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[3]/button')
             .click()
             .then(() => {
@@ -248,20 +316,26 @@ describe("Check all elements", function () {
         cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/div[2]')
             .children()
             .then((kids) => {
-                let directions = new Array();
+                let directionsFront = new Array();
                 for (let i = 0; i < kids.length; i++) {
-                    directions.push(kids[i].querySelectorAll('li')[2].querySelector('p').innerText)
+                    directionsFront.push(kids[i].querySelectorAll('li')[2].querySelector('p').innerText)
                 }
-                console.log("directins " + directions)
-                let copyDirections = directions.slice();
-                copyDirections.sort(sortAsc)
+                console.log('directionsFront ' + directionsFront)
+                console.log("kids length =", kids.length)
+                cy.task('queryDatabase', directionQuery)
+                    .then((val) => {
+                        let directionsDB = new Array();
+                        console.log(val)
+                        for (let i = 0; i < kids.length; i++) {
+                            directionsDB.push(val.recordset[i]['Value'])
+                        }
+                        console.log("directins " + directionsDB)
+                        expect(directionsFront.join(';')).to.equal(directionsDB.join(';'))
+                    })
 
-            // expect(copyDirections.join(';')).to.equal(directions.join(';'))
+                cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/button')
+                    .click();
             })
-
-        cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/button')
-            .click();
     })
-
 
 })
