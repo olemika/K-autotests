@@ -30,9 +30,27 @@ WHERE ldp.Deleted=0 AND ldp.Disabled=0
 AND a.AccountId=${admin.accountId}
 ORDER BY ds.Value`
 
-const tonerQuery = ` SELECT ldp.id, ISNULL(ds.Value, '0') AS Value 
+const tonerQuery = ` SELECT ldp.id, ISNULL(ds.Value, 0) AS Value 
 FROM LogicDevicePoints ldp 
-LEFT OUTER JOIN (SELECT LogicDevicePointId, MIN(Value) AS Value FROM  DeviceStates  WHERE ColumnId=4 GROUP BY LogicDevicePointId) ds  ON ldp.Id = ds.LogicDevicePointId
+LEFT OUTER JOIN (SELECT LogicDevicePointId, MIN(CONVERT(INT, Value)) AS Value FROM  DeviceStates  WHERE ColumnId=4 GROUP BY LogicDevicePointId) ds  ON ldp.Id = ds.LogicDevicePointId
+LEFT OUTER  JOIN Agents a ON a.Id = ldp.AgentId
+WHERE ldp.Deleted=0 AND ldp.Disabled=0
+AND a.AccountId=${admin.accountId}
+ORDER BY ds.Value`
+
+const groupNameQuery = `SELECT ldp.id, ISNULL(ds.Value, ' ') AS Value, s.Name
+FROM LogicDevicePoints ldp 
+LEFT OUTER JOIN (SELECT * FROM  DeviceStates  WHERE  SemanticId = '3AE30C7E-5A0C-4E99-B895-08D6E8F10CC0' AND Reliability=1) ds  ON ldp.Id = ds.LogicDevicePointId
+LEFT OUTER  JOIN Semantics s ON s.id = ds.SemanticId
+LEFT OUTER  JOIN Agents a ON a.Id = ldp.AgentId
+WHERE ldp.Deleted=0 AND ldp.Disabled=0
+AND a.AccountId=${admin.accountId}
+ORDER BY ds.Value`
+
+const extraQuery = `SELECT ldp.id, ISNULL(ds.Value, ' ') AS Value, s.Name
+FROM LogicDevicePoints ldp 
+LEFT OUTER JOIN (SELECT * FROM  DeviceStates  WHERE  SemanticId = 'A87960EB-D098-4134-B896-08D6E8F10CC0') ds  ON ldp.Id = ds.LogicDevicePointId
+LEFT OUTER  JOIN Semantics s ON s.id = ds.SemanticId
 LEFT OUTER  JOIN Agents a ON a.Id = ldp.AgentId
 WHERE ldp.Deleted=0 AND ldp.Disabled=0
 AND a.AccountId=${admin.accountId}
@@ -58,14 +76,14 @@ function MySort(alphabet) {
 }
 
 
- function sortAsc(a, b) {
-  if (a > b) {
-    return 1;
-  }
-  if (a < b) {
-    return -1;
-  }
-  return 0;
+function sortAsc(a, b) {
+    if (a > b) {
+        return 1;
+    }
+    if (a < b) {
+        return -1;
+    }
+    return 0;
 }
 //const sortAsc = MySort(' \'-!"#$%&()*,./:;?@[\\]^_`{|}~+<=>№01234567989aAbBcCdDeEfFgGhHiIjJkKlLmMnNoOpPqQrRsStTuUvVwWxXyYzZаАбБвВгГдДеЕёЁжЖзЗиИйЙкКлЛмМнНоОпПрРсСтТуУфФхХцЦчЧшШщЩъЪыЫьЬэЭюЮяЯ');
 
@@ -83,6 +101,10 @@ function compareIPAddresses(a, b) {
     return numA - numB;
 }
 
+function compareNumbers(a, b) {
+    return a - b;
+}
+
 describe("Check sort", function () {
     let newToken;
 
@@ -92,250 +114,570 @@ describe("Check sort", function () {
         })
         cy.login(admin);
         cy.wait(2000)
-        cy.xpath('//*[@id="aside-menu"]/li[3]/div/a')
-            .click();
-        cy.wait(2000);
 
-    })
-
-    it("Check groups names", function () {
-        let deviceGroups = new Set();
-
-        cy.task('queryDatabase', groupsQuery)
-            .then((res) => {
-
-                for (let i = 0; i < res.rowsAffected[0]; i++) {
-                    deviceGroups.add(res.recordset[i].Name)
-                }
-
-                deviceGroups.forEach(function (value) {
-                    cy.xpath('//*[@id="app-grid"]/div/div/div/div[1]/div[2]')
-                        .should('contain.text', value)
-                });
-
-                cy.xpath('//*[@id="app-grid"]/div/div/div/div[1]/div[2]')
-                    .children()
-                    .should('have.length', deviceGroups.size)
-            })
-    })
-
-    it("Check sort of device's names", function () {
-        //descending 
-        cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[1]/button').click();
-        cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[1]/button/span[2]')
-            .should('have.attr', 'data-value', 'desc');
-
-        cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/div[2]')
-            .children()
-            .then((kids) => {
-                let deviceNames = new Array();
-
-                for (let i = 0; i < kids.length; i++) {
-                    deviceNames.push(kids[i].querySelector('h6').innerText.toLowerCase())
-                }
-                let copyDeviceNames = deviceNames.slice();
-
-                copyDeviceNames.sort(sortAsc)
-                copyDeviceNames.reverse();
-
-                expect(copyDeviceNames.join(';')).to.equal(deviceNames.join(';'))
-
-            });
-
-
+        cy.xpath('//*[@id="aside-menu"]/li[3]/div/a').click().then(() => {
+            cy.wait(2000)
+        })
+        
        
+
     })
 
-    it("Sorting by device's names asc", () => {
-        cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[1]/button').click();
-        cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[1]/button/span[2]')
-            .should('have.attr', 'data-value', 'asc');
+    // it("Check groups names", function () {
+    //     let deviceGroups = new Set();
 
+    //     cy.task('queryDatabase', groupsQuery)
+    //         .then((res) => {
 
-        cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/div[2]')
-            .children()
-            .then((kids) => {
-                let deviceNames = new Array();
+    //             for (let i = 0; i < res.rowsAffected[0]; i++) {
+    //                 deviceGroups.add(res.recordset[i].Name)
+    //             }
 
-                for (let i = 0; i < kids.length; i++) {
-                    deviceNames.push(kids[i].querySelector('h6').innerText.toLowerCase())
-                }
-                let copyDeviceNames = deviceNames.slice();
+    //             deviceGroups.forEach(function (value) {
+    //                 cy.xpath('//*[@id="app-grid"]/div/div/div/div[1]/div[2]')
+    //                     .should('contain.text', value)
+    //             });
 
-                copyDeviceNames.sort(sortAsc)
+    //             cy.xpath('//*[@id="app-grid"]/div/div/div/div[1]/div[2]')
+    //                 .children()
+    //                 .should('have.length', deviceGroups.size)
+    //         })
+    // })
 
-                expect(copyDeviceNames.join(';')).to.equal(deviceNames.join(';'))
-            })
+    // it("Check sort of device's names", function () {
+    //     //descending 
+    //     cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[1]/button').click();
+    //     cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[1]/button/span[2]')
+    //         .should('have.attr', 'data-value', 'desc');
 
-        cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/button').click();
-    })
+    //     cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/div[2]')
+    //         .children()
+    //         .then((kids) => {
+    //             let deviceNames = new Array();
 
-    it('Sorting by ip address desc', () => {
+    //             for (let i = 0; i < kids.length; i++) {
+    //                 deviceNames.push(kids[i].querySelector('h6').innerText.toLowerCase())
+    //             }
+    //             let copyDeviceNames = deviceNames.slice();
 
-        cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/ul/li[4]/button').click({ force: true }).then(() => {
-            cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/ul/li[4]/ul/li[1]/button').click({ force: true });
-        })
-        //desc
-        cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[2]/button')
-            .click()
-            .then(() => {
-                cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[2]/button/span[2]')
-                    .should('have.attr', 'data-value', 'desc')
-            })
-        cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/div[2]')
-            .children()
-            .then((kids) => {
-                let ipAdressesFront = new Array();
+    //             copyDeviceNames.sort(sortAsc)
+    //             copyDeviceNames.reverse();
 
-                for (let i = 0; i < kids.length; i++) {
+    //             expect(copyDeviceNames.join(';')).to.equal(deviceNames.join(';'))
 
-                    if (kids[i].querySelector('.selectable p:nth-child(1)').getAttribute('data-reliability') == "false") {
-                        ipAdressesFront.push(' ')
-                    } else {
-                        ipAdressesFront.push(kids[i].querySelector('.selectable p:nth-child(1)').innerText)
-                    }
-
-                }
-
-                cy.task('queryDatabase', ipAdressQuery)
-                    .then((val) => {
-                        let ipAdressesDB = new Array();
-
-                        for (let i = 0; i < kids.length; i++) {
-                            ipAdressesDB.push(val.recordset[i]['Value'])
-                        }
-                        ipAdressesDB.sort(compareIPAddresses);
-                        ipAdressesDB.reverse();
-                        expect(ipAdressesDB.join(';')).to.equal(ipAdressesFront.join(';'))
-                    })
-
-            })
-    })
-
-    it('Sorting by ip address asc', () => {
-        cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/ul/li[4]/button').click({ force: true }).then(() => {
-            cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/ul/li[4]/ul/li[1]/button').click({ force: true });
-        })
-
-        cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[2]/button')
-            .click().then(() => {
-                cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[2]/button/span[2]')
-                    .should('have.attr', 'data-value', 'asc')
-            })
-
-        cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/div[2]')
-            .children()
-            .then((kids) => {
-                let ipAdressesFront = new Array();
-                // p:nth-child(10)
-                for (let i = 0; i < kids.length; i++) {
-
-                    if (kids[i].querySelector('.selectable p:nth-child(1)').getAttribute('data-reliability') == "false") {
-                        ipAdressesFront.push(' ')
-                    } else {
-                        ipAdressesFront.push(kids[i].querySelector('.selectable p:nth-child(1)').innerText)
-                    }
-
-                }
-
-                cy.task('queryDatabase', ipAdressQuery)
-                    .then((val) => {
-                        let ipAdressesDB = new Array();
-
-                        for (let i = 0; i < kids.length; i++) {
-                            ipAdressesDB.push(val.recordset[i]['Value'])
-                        }
-                        ipAdressesDB.sort(compareIPAddresses);
-
-                        expect(ipAdressesDB.join(';')).to.equal(ipAdressesFront.join(';'))
-                    })
-
-                cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/button')
-                    .click();
-
-            })
-    })
-
-    //Ждем доработку Артема
-    it('Sorting by direction desc', () => {
-        cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/ul/li[4]/button').click({ force: true }).then(() => {
-            cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/ul/li[4]/ul/li[1]/button').click({ force: true });
-        })
-
-        cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[3]/button')
-            .click()
-            .then(() => {
-                cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[3]/button/span[2]')
-                    .should('have.attr', 'data-value', 'desc')
-            })
+    //         });
 
 
 
+    // })
+
+    // it("Sorting by device's names asc", () => {
+    //     cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[1]/button').click();
+    //     cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[1]/button/span[2]')
+    //         .should('have.attr', 'data-value', 'asc');
 
 
-        cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/div[2]')
-            .children()
-            .then((kids) => {
-                let directionsFront = new Array();
-                for (let i = 0; i < kids.length; i++) {
-                    directionsFront.push(kids[i].querySelectorAll('li')[2].querySelector('p').innerText)
-                }
-                console.log('directionsFront ' + directionsFront)
-                console.log("kids length =", kids.length)
-                cy.task('queryDatabase', directionQuery)
-                    .then((val) => {
-                        let directionsDB = new Array();
-                        console.log(val)
-                        for (let i = 0; i < kids.length; i++) {
-                            directionsDB.push(val.recordset[i]['Value'])
-                        }
+    //     cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/div[2]')
+    //         .children()
+    //         .then((kids) => {
+    //             let deviceNames = new Array();
 
-                        console.log("directins " + directionsDB)
+    //             for (let i = 0; i < kids.length; i++) {
+    //                 deviceNames.push(kids[i].querySelector('h6').innerText.toLowerCase())
+    //             }
+    //             let copyDeviceNames = deviceNames.slice();
 
-                        directionsDB.reverse();
-                        expect(directionsFront.join(';')).to.equal(directionsDB.join(';'))
+    //             copyDeviceNames.sort(sortAsc)
 
-                    })
+    //             expect(copyDeviceNames.join(';')).to.equal(deviceNames.join(';'))
+    //         })
 
-            })
-    })
+    //     cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/button').click();
+    // })
 
-    it('Sorting by direction asc', () => {
-        cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/ul/li[4]/button').click({ force: true }).then(() => {
-            cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/ul/li[4]/ul/li[1]/button').click({ force: true });
-        })
+    // it('Sorting by ip address desc', () => {
 
-     
-        cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[3]/button')
-            .click()
-            .then(() => {
-                cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[3]/button/span[2]')
-                    .should('have.attr', 'data-value', 'asc')
-            })
+    //     cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/ul/li[4]/button').click({ force: true }).then(() => {
+    //         cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/ul/li[4]/ul/li[1]/button').click({ force: true });
+    //     })
+    //     //desc
+    //     cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[2]/button')
+    //         .click()
+    //         .then(() => {
+    //             cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[2]/button/span[2]')
+    //                 .should('have.attr', 'data-value', 'desc')
+    //         })
+    //     cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/div[2]')
+    //         .children()
+    //         .then((kids) => {
+    //             let ipAdressesFront = new Array();
 
-        cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/div[2]')
-            .children()
-            .then((kids) => {
-                let directionsFront = new Array();
-                for (let i = 0; i < kids.length; i++) {
-                    directionsFront.push(kids[i].querySelectorAll('li')[2].querySelector('p').innerText)
-                }
-                console.log('directionsFront ' + directionsFront)
-                console.log("kids length =", kids.length)
-                cy.task('queryDatabase', directionQuery)
-                    .then((val) => {
-                        let directionsDB = new Array();
-                        console.log(val)
-                        for (let i = 0; i < kids.length; i++) {
-                            directionsDB.push(val.recordset[i]['Value'])
-                        }
-                        console.log("directins " + directionsDB)
-                        expect(directionsFront.join(';')).to.equal(directionsDB.join(';'))
-                    })
+    //             for (let i = 0; i < kids.length; i++) {
 
-                cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/button')
-                    .click();
-            })
-    })
+    //                 if (kids[i].querySelector('.selectable p:nth-child(1)').getAttribute('data-reliability') == "false") {
+    //                     ipAdressesFront.push(' ')
+    //                 } else {
+    //                     ipAdressesFront.push(kids[i].querySelector('.selectable p:nth-child(1)').innerText)
+    //                 }
+
+    //             }
+
+    //             cy.task('queryDatabase', ipAdressQuery)
+    //                 .then((val) => {
+    //                     let ipAdressesDB = new Array();
+
+    //                     for (let i = 0; i < kids.length; i++) {
+    //                         ipAdressesDB.push(val.recordset[i]['Value'])
+    //                     }
+    //                     ipAdressesDB.sort(compareIPAddresses);
+    //                     ipAdressesDB.reverse();
+    //                     expect(ipAdressesDB.join(';')).to.equal(ipAdressesFront.join(';'))
+    //                 })
+
+    //         })
+    // })
+
+    // it('Sorting by ip address asc', () => {
+    //     cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/ul/li[4]/button').click({ force: true }).then(() => {
+    //         cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/ul/li[4]/ul/li[1]/button').click({ force: true });
+    //     })
+
+    //     cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[2]/button')
+    //         .click().then(() => {
+    //             cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[2]/button/span[2]')
+    //                 .should('have.attr', 'data-value', 'asc')
+    //         })
+
+    //     cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/div[2]')
+    //         .children()
+    //         .then((kids) => {
+    //             let ipAdressesFront = new Array();
+    //             // p:nth-child(10)
+    //             for (let i = 0; i < kids.length; i++) {
+
+    //                 if (kids[i].querySelector('.selectable p:nth-child(1)').getAttribute('data-reliability') == "false") {
+    //                     ipAdressesFront.push(' ')
+    //                 } else {
+    //                     ipAdressesFront.push(kids[i].querySelector('.selectable p:nth-child(1)').innerText)
+    //                 }
+
+    //             }
+
+    //             cy.task('queryDatabase', ipAdressQuery)
+    //                 .then((val) => {
+    //                     let ipAdressesDB = new Array();
+
+    //                     for (let i = 0; i < kids.length; i++) {
+    //                         ipAdressesDB.push(val.recordset[i]['Value'])
+    //                     }
+    //                     ipAdressesDB.sort(compareIPAddresses);
+
+    //                     expect(ipAdressesDB.join(';')).to.equal(ipAdressesFront.join(';'))
+    //                 })
+
+    //             cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/button')
+    //                 .click();
+
+    //         })
+    // })
+
+    // //Ждем доработку Артема
+    // it('Sorting by direction desc', () => {
+    //     cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/ul/li[4]/button').click({ force: true }).then(() => {
+    //         cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/ul/li[4]/ul/li[1]/button').click({ force: true });
+    //     })
+
+    //     cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[3]/button')
+    //         .click()
+    //         .then(() => {
+    //             cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[3]/button/span[2]')
+    //                 .should('have.attr', 'data-value', 'desc')
+    //         })
+
+    //     cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/div[2]')
+    //         .children()
+    //         .then((kids) => {
+    //             let directionsFront = new Array();
+    //             for (let i = 0; i < kids.length; i++) {
+    //                 directionsFront.push(kids[i].querySelectorAll('li')[2].querySelector('p').innerText)
+    //             }
+    //             console.log('directionsFront ' + directionsFront)
+    //             console.log("kids length =", kids.length)
+    //             cy.task('queryDatabase', directionQuery)
+    //                 .then((val) => {
+    //                     let directionsDB = new Array();
+    //                     console.log(val)
+    //                     for (let i = 0; i < kids.length; i++) {
+    //                         directionsDB.push(val.recordset[i]['Value'])
+    //                     }
+
+    //                     console.log("directins " + directionsDB)
+
+    //                     directionsDB.reverse();
+    //                     expect(directionsFront.join(';')).to.equal(directionsDB.join(';'))
+
+    //                 })
+
+    //         })
+    // })
+
+    // it('Sorting by direction asc', () => {
+    //     cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/ul/li[4]/button').click({ force: true }).then(() => {
+    //         cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/ul/li[4]/ul/li[1]/button').click({ force: true });
+    //     })
+
+
+    //     cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[3]/button')
+    //         .click()
+    //         .then(() => {
+    //             cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[3]/button/span[2]')
+    //                 .should('have.attr', 'data-value', 'asc')
+    //         })
+
+    //     cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/div[2]')
+    //         .children()
+    //         .then((kids) => {
+    //             let directionsFront = new Array();
+    //             for (let i = 0; i < kids.length; i++) {
+    //                 directionsFront.push(kids[i].querySelectorAll('li')[2].querySelector('p').innerText)
+    //             }
+    //             console.log('directionsFront ' + directionsFront)
+    //             console.log("kids length =", kids.length)
+    //             cy.task('queryDatabase', directionQuery)
+    //                 .then((val) => {
+    //                     let directionsDB = new Array();
+    //                     console.log(val)
+    //                     for (let i = 0; i < kids.length; i++) {
+    //                         directionsDB.push(val.recordset[i]['Value'])
+    //                     }
+    //                     console.log("directins " + directionsDB)
+    //                     expect(directionsFront.join(';')).to.equal(directionsDB.join(';'))
+    //                 })
+
+    //             cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/button')
+    //                 .click();
+    //         })
+    // })
+
+    // it("Sorting by toner's level desc", () => {
+    //     let minTonerFront = [];
+    //     let minTonerDB = [];
+
+    //     cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/ul/li[4]/button').click({ force: true }).then(() => {
+    //         cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/ul/li[4]/ul/li[1]/button').click({ force: true });
+    //     })
+    //     cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[4]/button').click().then(() => {
+    //         cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[4]/button/span[2]')
+    //             .should('have.attr', 'data-value', 'desc')
+    //     })
+
+    //     cy.task('queryDatabase', tonerQuery).then((val) => {
+
+
+    //         for (let i = 0; i < val.recordset.length; i++) {
+    //             minTonerDB.push(val.recordset[i]['Value'])
+    //         }
+    //         minTonerDB.sort(compareNumbers);
+    //         minTonerDB.reverse();
+    //         console.log(minTonerDB)
+    //     })
+
+
+    //     cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/div[2]')
+    //         .children()
+    //         .then((kids) => {
+    //             let sameLength = [];
+    //             for (let i = 0; i < kids.length; i++) {
+    //                 let valuesInOneDevice = []
+    //                 kids[i].querySelectorAll('li')[3].querySelectorAll('li').forEach((val) => {
+
+    //                     valuesInOneDevice.push(parseInt(val.getAttribute('data-value')))
+
+    //                 })
+
+    //                 let x = Math.min(...valuesInOneDevice);
+
+    //                 minTonerFront.push(x)
+
+    //             }
+    //             for (let i = 0; i < minTonerFront.length; i++) {
+    //                 sameLength.push(minTonerDB[i])
+    //             }
+
+    //             expect(sameLength.join(';')).to.equal(minTonerFront.join(';'))
+
+    //         })
+    // })
+
+
+    // it("Sorting by toner's level asc", () => {
+    //     let minTonerFront = [];
+    //     let minTonerDB = [];
+
+
+    //     cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[4]/button').click().then(() => {
+    //         cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[4]/button/span[2]')
+    //             .should('have.attr', 'data-value', 'asc')
+    //     })
+
+    //     cy.task('queryDatabase', tonerQuery).then((val) => {
+
+
+    //         for (let i = 0; i < val.recordset.length; i++) {
+    //             minTonerDB.push(val.recordset[i]['Value'])
+    //         }
+    //         minTonerDB.sort(compareNumbers);
+    //         console.log(minTonerDB)
+    //     })
+
+
+    //     cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/div[2]')
+    //         .children()
+    //         .then((kids) => {
+    //             let sameLength = [];
+    //             for (let i = 0; i < kids.length; i++) {
+    //                 let valuesInOneDevice = []
+    //                 kids[i].querySelectorAll('li')[3].querySelectorAll('li').forEach((val) => {
+
+    //                     valuesInOneDevice.push(parseInt(val.getAttribute('data-value')))
+
+    //                 })
+
+    //                 let x = Math.min(...valuesInOneDevice);
+
+    //                 minTonerFront.push(x)
+
+    //             }
+    //             for (let i = 0; i < minTonerFront.length; i++) {
+    //                 sameLength.push(minTonerDB[i])
+    //             }
+
+    //             expect(sameLength.join(';')).to.equal(minTonerFront.join(';'))
+
+    //         })
+
+    //     cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/button')
+    //         .click();
+    // })
+
+
+    // it("Sorting by group names desc", () => {
+    //     let groupNamesDB = [];
+    //     let groupNamesFront = [];
+
+    //     cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/ul/li[4]/button').click({ force: true })
+    //         .then(() => {
+    //             cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/ul/li[4]/ul/li[1]/button').click({ force: true });
+    //         })
+
+    //     cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[6]/button').click().then(() => {
+    //         cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[6]/button/span[2]')
+    //             .should('have.attr', 'data-value', 'desc')
+    //     })
+    //     cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/div[2]')
+    //         .children()
+    //         .then((kids) => {
+    //             for (let i = 0; i < kids.length; i++) {
+
+    //                 groupNamesFront.push(kids[i].querySelectorAll('div')[5].querySelector('p').innerText)
+    //             }
+
+    //             cy.task('queryDatabase', groupNameQuery).then((val) => {
+    //                 let sameLength = []
+    //                 for (let i = 0; i < val.recordset.length; i++) {
+    //                     groupNamesDB.push(val.recordset[i]['Value'])
+    //                 }
+    //                 console.log("before ", groupNamesDB)
+    //                 groupNamesDB.reverse();
+    //                 console.log("after ", groupNamesDB)
+
+    //                 for (let i = 0; i < kids.length; i++) {
+    //                     sameLength.push(groupNamesDB[i])
+    //                 }
+    //                 expect(sameLength.join(";")).to.equal(groupNamesFront.join(";"))
+    //             })
+
+    //         })
+
+    // })
+
+
+    // it("Sorting by group names asc", () => {
+    //     let groupNamesDB = [];
+    //     let groupNamesFront = [];
+
+    //     cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/ul/li[4]/button').click({ force: true })
+    //         .then(() => {
+    //             cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/ul/li[4]/ul/li[1]/button').click({ force: true });
+    //         })
+
+    //     cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[6]/button').click().then(() => {
+    //         cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[6]/button/span[2]')
+    //             .should('have.attr', 'data-value', 'asc')
+    //     })
+    //     cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/div[2]')
+    //         .children()
+    //         .then((kids) => {
+    //             for (let i = 0; i < kids.length; i++) {
+
+    //                 groupNamesFront.push(kids[i].querySelectorAll('div')[5].querySelector('p').innerText)
+    //             }
+    //             cy.task('queryDatabase', groupNameQuery).then((val) => {
+
+    //                 for (let i = 0; i < kids.length; i++) {
+    //                     groupNamesDB.push(val.recordset[i]['Value'])
+    //                 }
+
+    //                 expect(groupNamesDB.join(";")).to.equal(groupNamesFront.join(";"))
+    //             })
+
+    //         })
+    //     cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/button')
+    //         .click();
+    // })
+
+
+    // it("Sorting by extras names desc", () => {
+    //     let extrasDB = [];
+    //     let extrasFront = [];
+
+    //     cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/ul/li[4]/button').click({ force: true })
+    //         .then(() => {
+    //             cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/ul/li[4]/ul/li[1]/button').click({ force: true });
+    //         })
+
+    //     cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[5]/button').click().then(() => {
+    //         cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[5]/button/span[2]')
+    //             .should('have.attr', 'data-value', 'desc')
+    //     })
+    //     cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/div[2]')
+    //         .children()
+    //         .then((kids) => {
+    //             for (let i = 0; i < kids.length; i++) {
+
+    //                 extrasFront.push(kids[i].querySelectorAll('div')[4].querySelector('p').innerText)
+    //             }
+
+    //             cy.task('queryDatabase', extraQuery).then((val) => {
+    //                 let sameLength = []
+    //                 for (let i = 0; i < val.recordset.length; i++) {
+    //                     extrasDB.push(val.recordset[i]['Value'])
+    //                 }
+    //                 extrasDB.reverse();
+    //                 for (let i = 0; i < kids.length; i++) {
+    //                     sameLength.push(extrasDB[i])
+    //                 }
+    //                 expect(sameLength.join(";")).to.equal(extrasFront.join(";"))
+    //             })
+
+    //         })
+
+    // })
+
+
+    // it("Sorting by extras names asc", () => {
+    //     let extrasDB = [];
+    //     let extrasFront = [];
+
+    //     cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/ul/li[4]/button').click({ force: true })
+    //         .then(() => {
+    //             cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/ul/li[4]/ul/li[1]/button').click({ force: true });
+    //         })
+
+    //     cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[5]/button').click().then(() => {
+    //         cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[5]/button/span[2]')
+    //             .should('have.attr', 'data-value', 'asc')
+    //     })
+    //     cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/div[2]')
+    //         .children()
+    //         .then((kids) => {
+    //             for (let i = 0; i < kids.length; i++) {
+
+    //                 extrasFront.push(kids[i].querySelectorAll('div')[4].querySelector('p').innerText)
+    //             }
+    //             cy.task('queryDatabase', extraQuery).then((val) => {
+
+    //                 for (let i = 0; i < kids.length; i++) {
+    //                     extrasDB.push(val.recordset[i]['Value'])
+    //                 }
+
+    //                 expect(extrasDB.join(";")).to.equal(extrasFront.join(";"))
+    //             })
+
+    //         })
+    //     cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/button')
+    //         .click();
+    // })
+
+
+
+    // it("Sorting by state  desc", () => {
+
+    //     let stateFront = [];
+
+    //     cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/ul/li[4]/button').click({ force: true })
+    //         .then(() => {
+    //             cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/ul/li[4]/ul/li[1]/button').click({ force: true });
+    //         })
+
+    //     cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[7]/button').click().then(() => {
+    //         cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[7]/button/span[2]')
+    //             .should('have.attr', 'data-value', 'desc')
+    //     })
+    //     cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/div[2]')
+    //         .children()
+    //         .then((kids) => {
+    //             for (let i = 0; i < kids.length; i++) {
+
+    //                 stateFront.push(kids[i].querySelectorAll('div')[6].querySelector('p').innerText)
+    //             }
+
+    //             let newStates = stateFront.slice();
+
+    //             newStates.sort(sortAsc)
+
+
+
+    //             expect(stateFront.join(";")).to.equal(newStates.join(";"))
+
+    //         })
+
+    // })
+
+
+    // it("Sorting by state  asc", () => {
+    //     let stateFront = [];
+
+    //     cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/ul/li[4]/button').click({ force: true })
+    //         .then(() => {
+    //             cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/ul/li[4]/ul/li[1]/button').click({ force: true });
+    //         })
+
+    //     cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[7]/button').click().then(() => {
+    //         cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[7]/button/span[2]')
+    //             .should('have.attr', 'data-value', 'asc')
+    //     })
+    //     cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/div[2]')
+    //         .children()
+    //         .then((kids) => {
+    //             for (let i = 0; i < kids.length; i++) {
+
+    //                 stateFront.push(kids[i].querySelectorAll('div')[6].querySelector('p').innerText)
+    //             }
+
+    //             let newStates = stateFront.slice();
+
+    //             newStates.sort(sortAsc)
+
+    //             newStates.reverse();
+
+    //             expect(stateFront.join(";")).to.equal(newStates.join(";"))
+
+    //         })
+    //     cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/button')
+    //         .click();
+    // })
+
+    
 
 })
