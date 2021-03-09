@@ -14,9 +14,9 @@ describe("Check all elements", function () {
 
     it("Check that all elements exist and have the correct statе", function () {
 
-        cy.get('a[data-field="monitoring_devices"]').click().then(() => {
+        cy.get('a[data-field="monitoring_devices"]').click({force: true}).then(() => {
 
-            cy.wait(3000)
+            cy.wait(2000)
             cy.xpath('//*[@id="app-grid"]/div/header/section[1]/div/h1')
                 .should('be.visible')
                 .should('have.text', 'Устройства');

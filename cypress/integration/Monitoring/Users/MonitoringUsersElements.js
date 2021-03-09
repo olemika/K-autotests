@@ -9,10 +9,13 @@ describe("Check all elements", function () {
         cy.getWebApiToken(admin).then((result) => {
             return newToken = result;
         })
-        cy.login(admin);
+        cy.login(admin)
         cy.wait(2000)
+        cy.get('a[data-field="monitoring_employees"]').click({force: true});
 
-        cy.xpath('//*[@id="aside-menu"]/li[4]/div/a').click();
+    
+
+
     })
 
     it("Check all the elements", function () {
@@ -114,14 +117,11 @@ describe("Check all elements", function () {
                     .children().each((el) => {
                         let elDisabled = false;
 
-                        // console.log(el[0].firstChild)
-                        // console.log("disabled attr = " + el[0].firstChild.disabled)
-                        // console.log("data-disabled attr = " + el[0].firstChild.getAttribute('data-disabled'))
-
                         if (el[0].firstChild.disabled === true || el[0].firstChild.getAttribute('data-disabled') === "true") {
-                
+
                             elDisabled = true;
-                        } 
+                            cy.log("Disabled")
+                        }
 
                         expect(elDisabled).true
                     })
@@ -141,7 +141,6 @@ describe("Check all elements", function () {
                 cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/div[2]/p')
                     .should('not.exist');
 
-             
             })
 
     })
