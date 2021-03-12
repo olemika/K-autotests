@@ -11,9 +11,9 @@ describe("Check all elements", function () {
         })
         cy.login(admin)
         cy.wait(2000)
-        cy.get('a[data-field="monitoring_employees"]').click({force: true});
+        cy.get('a[data-field="monitoring_employees"]').click({ force: true });
 
-    
+
 
 
     })
@@ -44,10 +44,18 @@ describe("Check all elements", function () {
         cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[3]/button')
             .should('be.visible')
             .should('have.text', 'Печать');
-
+    
         cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[4]/button')
             .should('be.visible')
-            .should('have.text', 'Стоимость печати');
+            .should('have.text', 'Копирование');
+
+            cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[5]/button')
+            .should('be.visible')
+            .should('have.text', 'Сканирование');
+
+        cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[6]/button')
+            .should('be.visible')
+            .should('have.text', 'Стоимость');
 
         cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/button')
             .should('be.visible')

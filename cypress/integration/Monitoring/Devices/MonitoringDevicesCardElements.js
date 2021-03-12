@@ -1,6 +1,6 @@
 
 const admin = Cypress.env('mainOrgAdmin');
-const months =['Январь', "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"]
+const months = ['Январь', "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"]
 let date = new Date();
 let day = date.getDate();
 let year = date.getFullYear();
@@ -14,7 +14,7 @@ describe("Check elements on device-card", () => {
         // })
         cy.login(admin)
         cy.wait(2000)
-        
+
         console.log(date)
 
     })
@@ -40,7 +40,7 @@ describe("Check elements on device-card", () => {
             .should('exist')
             .should('be.visible')
 
-            cy.xpath('//*[@id="app-grid"]/div/div')
+        cy.xpath('//*[@id="app-grid"]/div/div')
             .scrollTo('right');
 
         cy.xpath('//*[@id="app-grid"]/div/div/div/section[2]/nav/ul/li[1]/a')
@@ -120,22 +120,33 @@ describe("Check elements on device-card", () => {
 
 
             cy.xpath('/html/body/div[4]/div[1]')
-                .click('topRight', {force: true}).then(() => {
+                .click('topRight', { force: true }).then(() => {
                     cy.xpath('/html/body/div[4]/div[3]/div')
                         .should('not.exist');
                 })
         })
 
         cy.xpath('//*[@id="app-grid"]/div/div/div/section[2]/div[1]/div/ul[2]/li[1]/div/div/div/div/div/a')
-        .click().then(() => {
-            cy.xpath('/html/body/div[3]').should('be.visible')
+            .click().then(() => {
+                cy.xpath('/html/body/div[3]').should('be.visible')
 
-            cy.get('span[aria-current="date"]').invoke('text').then(a => {
-                expect(parseInt(a, 10)).to.equal(day)
+                cy.get('span[aria-current="date"]').then(span => {
+                    let a = span[0].getAttribute('aria-label')
+
+                    expect(a).to.equal(month + ' ' + day + ', ' + year)
+                })
+                cy.get('span[aria-current="date"]').next().click().then(() => {
+                    cy.xpath('/html/body/div[3]/div[4]/div/button[2]/span[1]').click();
+
+                    cy.xpath('//*[@id="app-grid"]/div/div/div/section[2]/div[1]/div/ul[2]/li[1]/button/span[1]')
+                        .should('be.visible')
+                        .should('have.text', 'Перейти к текущему состоянию');
+
+                    cy.xpath('//*[@id="app-grid"]/div/div/div/section[2]/div[1]/div/ul[2]/li[1]/div[1]')
+                        .should('be.visible')
+                })
+
             })
-
-            cy.xpath('/html/body/div[3]/div[1]/div/div/select').should('have.text', month);
-        })
 
     })
 })
