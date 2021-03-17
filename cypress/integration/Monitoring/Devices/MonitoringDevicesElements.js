@@ -8,13 +8,13 @@ describe("Check all elements", function () {
         cy.getWebApiToken(admin).then((result) => {
             return newToken = result;
         })
-        cy.login(admin);
-        cy.wait(2000)
+        cy.loginToken(admin);
+        cy.visit(`${admin.accountId}/monitoring/devices/`);
+
     })
 
     it("Check that all elements exist and have the correct statе", function () {
 
-        cy.get('a[data-field="monitoring_devices"]').click({force: true}).then(() => {
 
             cy.wait(2000)
             cy.xpath('//*[@id="app-grid"]/div/header/section[1]/div/h1')
@@ -91,7 +91,7 @@ describe("Check all elements", function () {
                 .should('contain', 'Доступен')
                 .should('contain', 'Недоступен')
                 .should('contain', 'Требует обслуживания')
-        })
+       
 
     })
 

@@ -12,10 +12,9 @@ describe("Check elements on device-card", () => {
         // cy.getWebApiToken(admin).then((result) => {
         //     return newToken = result;
         // })
-        cy.login(admin)
-        cy.wait(2000)
 
-        console.log(date)
+        cy.loginToken(admin);
+        cy.visit(`${admin.accountId}/monitoring/devices/`);
 
     })
 

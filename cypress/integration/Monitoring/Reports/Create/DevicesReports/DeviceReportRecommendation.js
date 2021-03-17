@@ -23,10 +23,6 @@ describe('Create reports ("DeviceReportRecommendation" template)', {
     })
 
     it("Create standart report (DeviceReportRecommendation)", () => {
-        let monthAgo = sub(today, {
-            months: 1
-        });
-        let todayString = today.toISOString();
         const autoName = `Auto${Math.floor(Math.random() * 99999)}`
 
         //Стандартный отчет Одно значение за период, дата - сегодня,  все устройства, XLSX

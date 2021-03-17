@@ -26,7 +26,6 @@ describe('Create reports ("Incidents" template)', {
         let monthAgo = sub(today, {
             months: 1
         });
-        let todayString = today.toISOString();
         const autoName = `Auto${Math.floor(Math.random() * 99999)}`
 
         //Стандартный отчет (Одно значение за период), за последний месяц,  все устройства, XLSX

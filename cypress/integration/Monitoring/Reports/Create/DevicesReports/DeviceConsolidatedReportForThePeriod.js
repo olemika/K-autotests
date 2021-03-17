@@ -13,7 +13,7 @@ describe('Create reports ("DeviceConsolidatedReportForThePeriod" template)', {
     let newToken;
 
     beforeEach(() => {
-        cy.loginToken(admin)
+      
 
         cy.getWebApiToken(admin)
             .then((result) => {

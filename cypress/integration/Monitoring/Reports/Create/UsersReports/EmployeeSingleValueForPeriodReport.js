@@ -26,7 +26,6 @@ describe('Create reports ("EmployeePrintJobListReport" template)', {
         let monthAgo = sub(today, {
             months: 1
         });
-        let todayString = today.toISOString();
         const autoName = `Auto${Math.floor(Math.random() * 99999)}`
 
         //Стандартный отчет по дням, за последний месяц,  все пользователи, XLSX
