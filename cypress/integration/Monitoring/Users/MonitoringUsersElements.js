@@ -6,12 +6,8 @@ describe("Check all elements", function () {
     let newToken;
 
     before(() => {
-        cy.getWebApiToken(admin).then((result) => {
-            return newToken = result;
-        })
-        cy.login(admin)
-        cy.wait(2000)
-        cy.get('a[data-field="monitoring_employees"]').click({ force: true });
+        cy.loginToken(admin)
+        cy.visit(`${admin.accountId}/monitoring/employees/`)
 
 
 

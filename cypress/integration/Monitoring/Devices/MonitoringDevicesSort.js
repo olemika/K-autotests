@@ -92,7 +92,6 @@ function MySort(alphabet) {
     }
 }
 
-
 function sortAsc(a, b) {
     if (a > b) {
         return 1;
@@ -123,14 +122,11 @@ function compareNumbers(a, b) {
 }
 
 describe("Check sort", function () {
-    let newToken;
+   
     before(() => {
-        cy.getWebApiToken(admin).then((result) => {
-            return newToken = result;
-        })
-        cy.login(admin)
-        cy.wait(2000)
-        cy.get('a[data-field="monitoring_devices"]').click({ force: true });
+   
+        cy.loginToken(admin)
+        cy.visit(`${admin.accountId}/monitoring/devices/`)
     })
 
     it("Check groups names", function () {
