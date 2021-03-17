@@ -608,8 +608,9 @@ describe("Check all elements in create-form", {
                     }
                 })
 
-                cy.xpath('//*[@id="app-grid"]/div/div/div/div/div[3]/section[2]/div/div[2]/div').children().each(kid => {
+                cy.xpath('//*[@id="app-grid"]/div/div/div/div/div[3]/section[2]/div/div[2]/div').children({timeout: 3000}).each(kid => {
 
+                  
                     if (kid[0].querySelector('span').innerText != `​​Без подразделения`) {
                         frontUserGroups.push(kid[0].querySelector('span').innerText)
                     } else {
@@ -619,6 +620,7 @@ describe("Check all elements in create-form", {
                     cy.get(kid).click().then(() => {
                         cy.get(kid).should('have.attr', 'data-active', 'true')
                     })
+                   
                 }).then(() => {
                     //проверяем, что данные из базы про группам совпадает с тем, что мы видим
                     DBUserGroups.map(el => {
@@ -779,31 +781,31 @@ describe("Check all elements in create-form", {
             .should('be.checked');
 
         cy.xpath('//*[@id="app-grid"]/div/div/div/div/div[3]/section[2]/div/div[2]/label')
-        .should('have.text', 'Группы устройств');
+            .should('have.text', 'Группы устройств');
         cy.xpath('//*[@id="app-grid"]/div/div/div/div/div[3]/section[2]/div/div[2]/label/span[1]/span[1]/input')
-        .should('not.be.checked')
+            .should('not.be.checked')
 
         cy.xpath('//*[@id="app-grid"]/div/div/div/div/div[3]/section[2]/div/div[3]/label')
-        .should('have.text', 'Модели устройств');
+            .should('have.text', 'Модели устройств');
         cy.xpath('//*[@id="app-grid"]/div/div/div/div/div[3]/section[2]/div/div[3]/label/span[1]/span[1]/input')
-        .should('not.be.checked');
+            .should('not.be.checked');
 
         cy.xpath('//*[@id="app-grid"]/div/div/div/div/div[3]/section[2]/div/div[4]/label')
-        .should('have.text', 'Отдельные устройства');
+            .should('have.text', 'Отдельные устройства');
         cy.xpath('//*[@id="app-grid"]/div/div/div/div/div[3]/section[2]/div/div[4]/label/span[1]/span[1]/input')
-        .should('not.be.checked');
+            .should('not.be.checked');
 
         cy.xpath('//*[@id="app-grid"]/div/div/div/div/div[5]/ul/li[3]/button')
-        .should('have.text', 'Фильтрация устройств');
+            .should('have.text', 'Фильтрация устройств');
 
         cy.xpath('//*[@id="app-grid"]/div/div/div/div/div[3]/section[2]/div/div[1]/p')
-        .should('have.text', 'Отчёт будет включать все устройства в системе');
+            .should('have.text', 'Отчёт будет включать все устройства в системе');
         cy.xpath('//*[@id="app-grid"]/div/div/div/div/div[3]/section[2]/div/div[2]/p')
-        .should('have.text', 'Отчёт будет включать устройства из выбранных групп');
+            .should('have.text', 'Отчёт будет включать устройства из выбранных групп');
         cy.xpath('//*[@id="app-grid"]/div/div/div/div/div[3]/section[2]/div/div[3]/p')
-        .should('have.text', 'Отчёт будет включать устройства выбранных моделей');
+            .should('have.text', 'Отчёт будет включать устройства выбранных моделей');
         cy.xpath('//*[@id="app-grid"]/div/div/div/div/div[3]/section[2]/div/div[4]/p')
-        .should('have.text', 'Отчёт будет включать только выбранные устройства');
+            .should('have.text', 'Отчёт будет включать только выбранные устройства');
 
 
     })
@@ -829,7 +831,7 @@ describe("Check all elements in create-form", {
 
         cy.xpath('//*[@id="app-grid"]/div/div/div/div/div[3]/section[2]/div/div[2]/label')
             .click().then(() => {
-                cy.wait(3000)
+                cy.wait(2000)
                 cy.xpath('//*[@id="app-grid"]/div/div/div/div/div[3]/section[2]/div/div[2]/div')
                     .children().each(kid => {
                         expect(deviceGroups).to.include(kid[0].getAttribute('title'))
@@ -900,8 +902,8 @@ describe("Check all elements in create-form", {
                     .should('have.text', 'Выбрать по правилам')
 
                 //Выбрать из списка
-                cy.xpath('//*[@id="app-grid"]/div/div/div/div/div[3]/section[2]/div/div[4]/div/button[1]').
-                    click().then(() => {
+                cy.xpath('//*[@id="app-grid"]/div/div/div/div/div[3]/section[2]/div/div[4]/div/button[1]')
+                    .click().then(() => {
 
                         cy.xpath('//*[@id="app-grid"]/div/div/div/div/div[3]/section[2]/div/div/div[1]/div/div/div/button[2]')
                             .click();
@@ -939,8 +941,63 @@ describe("Check all elements in create-form", {
                         cy.xpath('//*[@id="app-grid"]/div/div/div/div/div[3]/section[2]/div/div/div[3]/button[2]')
                             .should('be.disabled')
 
-                            cy.xpath('//*[@id="app-grid"]/div/div/div/div/div[3]/section[2]/div/div/div[3]/button[1]').click();
+                        cy.xpath('//*[@id="app-grid"]/div/div/div/div/div[3]/section[2]/div/div/div[3]/button[1]').click();
                     })
+
+                cy.xpath('//*[@id="app-grid"]/div/div/div/div/div[3]/section[2]/div/div[4]/div/button[2]')
+                    .click().then(() => {
+
+                        cy.xpath('//*[@id="app-grid"]/div/div/div/div/div[3]/section[2]/div/header/h3')
+                            .should('have.text', 'Добавить новый параметр фильтрации устройств')
+
+                        cy.xpath('//*[@id="app-grid"]/div/div/div/div/div[3]/section[2]/div/footer/button[2]')
+                            .should('be.disabled');
+
+                        cy.xpath('//*[@id="app-grid"]/div/div/div/div/div[3]/section[2]/div/div/ul')
+                            .children().each(kid => {
+                                cy.get(kid).click();
+                            })
+
+                        cy.xpath('//*[@id="app-grid"]/div/div/div/div/div[3]/section[2]/div/footer/button[2]')
+                            .should('not.be.disabled');
+
+                        cy.xpath('//*[@id="app-grid"]/div/div/div/div/div[3]/section[2]/div/footer/button[2]').click().then(() => {
+                            cy.xpath('//*[@id="app-grid"]/div/div/div/div/div[3]/section[2]/div/header/h3')
+                                .should('have.text', 'Настройка фильтра по устройствам')
+                            cy.xpath('//*[@id="app-grid"]/div/div/div/div/div[3]/section[2]/div/footer/button[2]')
+                                .should('be.visible');
+
+                            cy.xpath('//*[@id="app-grid"]/div/div/div/div/div[3]/section[2]/div/div/ul/li[1]/ul/li/ul/li[1]/div/button')
+                                .click();
+                            cy.xpath('//*[@id="reports-create-operation"]/div[3]/ul/li[1]')
+                                .should('have.text', 'Включая');
+                            cy.xpath('//*[@id="reports-create-operation"]/div[3]/ul/li[2]')
+                                .should('have.text', 'Исключая');
+
+                            cy.xpath('//*[@id="app-grid"]/div/div/div/div/div[3]/section[2]/div/div/ul/li[1]/ul/li/ul/li[5]/div/button')
+                                .click({ force: true });
+                            cy.xpath('//*[@id="reports-create-more"]/div[3]/ul/li[1]')
+                                .should('have.text', 'Дублировать');
+                            cy.xpath('//*[@id="reports-create-more"]/div[3]/ul/li[2]')
+                                .should('have.text', 'Удалить');
+
+                            cy.xpath('//*[@id="app-grid"]/div/div/div/div/div[3]/section[2]/div/div/ul/li[1]/ul/li/ul/li[3]/div/button')
+                                .click({ force: true })
+                            cy.xpath('//*[@id="reports-create-operators"]/div[3]/ul/li[1]')
+                                .should('have.text', 'Содержит');
+                            cy.xpath('//*[@id="reports-create-operators"]/div[3]/ul/li[2]')
+                                .should('have.text', 'Не содержит');
+                            cy.xpath('//*[@id="reports-create-operators"]/div[3]/ul/li[3]/div/button[1]')
+                                .should('have.text', 'Всегда');
+                            cy.xpath('//*[@id="reports-create-operators"]/div[3]/ul/li[3]/div/button[2]')
+                                .should('have.text', 'Хотя бы раз');
+
+                            cy.xpath('//*[@id="app-grid"]/div/div/div/div/div[3]/section[2]/div/footer/button[1]')
+                                .click({force: true});
+                        })
+                    })
+
+
             })
 
     })
