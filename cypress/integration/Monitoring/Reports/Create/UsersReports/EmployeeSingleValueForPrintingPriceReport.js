@@ -73,6 +73,7 @@ describe('Create reports ("EmployeePrintJobListReport" template)', {
         cy.xpath('//*[@id="app-grid"]/div/div/div/div/table/tbody')
         .children().first().then((el => {
             expect(el[0].querySelector('strong').innerText).to.contain(autoName);
+            cy.get(el[0].querySelector('button[title="Скачать"]'), {timeout: 600000*2.9}).should('be.visible')
         }))
     })
 })

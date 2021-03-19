@@ -26,9 +26,9 @@ describe('Create reports ("EmployeePrintJobListReport" template)', {
         let monthAgo = sub(today, {
             months: 1
         });
-        const autoName = `Auto${Math.floor(Math.random() * 99999)}`
+        const autoName = `Auto${Math.floor(Math.random() * 999999)}`
 
-        //Стандартный отчет по дням, за последний месяц,  все пользователи, XLSX
+        //Стандартный отчет (одно значение), за последний месяц,  все пользователи, XLSX
         let options = {
             method: 'POST',
             url: `${webApi}/v3/history/create-report`,
