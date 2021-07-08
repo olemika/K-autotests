@@ -1,7 +1,9 @@
-import { sub } from 'date-fns';
 const webApi = Cypress.env('webApi');
 const admin = Cypress.env('mainOrgAdmin');
 const today = new Date();
+const reportCode = 'DeviceReportRecommendation';
+import {getTemplateIdQuery} from "../../../../../fixtures/queries";
+let code;
 
 //Устройства - рекомендация к заказу расходных материалов
 describe('Create reports ("DeviceReportRecommendation" template)', {
@@ -19,6 +21,11 @@ describe('Create reports ("DeviceReportRecommendation" template)', {
             .then((result) => {
                 return newToken = result;
             })
+        cy.task('queryDatabase', getTemplateIdQuery(reportCode)).then(res => {
+
+            code = res[0]['Id'];
+
+        })
 
     })
 
@@ -31,7 +38,7 @@ describe('Create reports ("DeviceReportRecommendation" template)', {
             url: `${webApi}/v3/history/create-report`,
             body: {
                 "fileFormat": "xlsx",
-                "template": 6,
+                "template": code,
                 "name": `STANDART-${autoName} Устройства - рекомендация к заказу расходных материалов`,
                 "description": `Report created by autotest. Date: ${today.toLocaleString()}, standard (all) semantics, granularity - one value, devices - all`,
                 "grouping": "one",
@@ -48,7 +55,7 @@ describe('Create reports ("DeviceReportRecommendation" template)', {
                     "filters": null
                 },
                 "employees": null,
-                "semantics":  ["ac142b83-2ec7-4714-abe0-97d22f6f9a1e"]
+                "semantics": ["ac142b83-2ec7-4714-abe0-97d22f6f9a1e"]
             },
             headers: {
 
@@ -59,7 +66,7 @@ describe('Create reports ("DeviceReportRecommendation" template)', {
         }
 
         cy.request(options).then(res => {
-            
+
             expect(res.status).to.equal(200)
             cy.log("Отчет создан")
         })
@@ -69,8 +76,8 @@ describe('Create reports ("DeviceReportRecommendation" template)', {
             .type(`${autoName}{enter}`)
 
         cy.xpath('//*[@id="app-grid"]/div/div/div/div/table/tbody')
-        .children().first().then((el => {
-            expect(el[0].querySelector('strong').innerText).to.contain(autoName);
-        }))
+            .children().first().then((el => {
+                expect(el[0].querySelector('strong').innerText).to.contain(autoName);
+            }))
     })
 })

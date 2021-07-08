@@ -16,6 +16,8 @@
  * @type {Cypress.PluginConfig}
  */
 const dbConfig = require('../../cypress.json');
+const env = require('../../cypress.env.json');
+const dbType = env.dbType;
 
 module.exports = (on, config) => {
   tasks = sqlServer.loadDBPlugin(dbConfig.db);
@@ -25,10 +27,29 @@ module.exports = (on, config) => {
 
 //database ms sql
 const mssql = require('mssql');
+const { Pool } = require('pg');
 
 
-  async function queryDB (connectionInfo, query) {
+async function queryDBpg(connectionInfo, query) {
+  const pool = await new Pool(connectionInfo);
 
+
+
+    return new Promise((resolve, reject) => {
+      pool.query(query, (error, results) => {
+
+        if (error) {
+          return reject(error)
+          
+        }
+
+        return resolve(results.rows)
+        
+      })
+    })
+}
+
+async function queryDBms(connectionInfo, query) {
   const connection = new mssql.ConnectionPool(connectionInfo);
   await connection.connect()
 
@@ -40,21 +61,36 @@ const mssql = require('mssql');
 
       connection.close()
 
-      return resolve(results)
+      return resolve(results.recordset)
     })
   })
 }
 module.exports = (on, config) => {
-  on('task', {
-    // destructure the argument into the individual fields
-    queryDatabase (query) {
-      const connectionInfo = dbConfig.db
-
-      if (!connectionInfo) {
-        throw new Error(`Do not have DB connection`)
+  if(dbType === 'pg') {
+    on('task', {
+      queryDatabase(query) {
+        const connectionInfo = dbConfig.dbpg
+  
+        if (!connectionInfo) {
+          throw new Error(`Do not have DB connection`)
+        }
+  
+        return queryDBpg(connectionInfo, query)
       }
-
-      return queryDB(connectionInfo, query)
-    }
-  })
+    })
+  } else if (dbType === 'mssql') {
+    on('task', {
+  
+      queryDatabase(query) {
+        const connectionInfo = dbConfig.dbmssql
+  
+        if (!connectionInfo) {
+          throw new Error(`Do not have DB connection`)
+        }
+  
+        return queryDBms(connectionInfo, query)
+      }
+    })
+  }
+  
 }

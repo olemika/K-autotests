@@ -25,22 +25,42 @@
 // Cypress.Commands.overwrite("visit", (originalFn, url, options) => { ... })
 const webApi = Cypress.env('webApi')
 
- function getToken(usr) {
+function getToken(usr) {
     return cy.request('POST', `${webApi}/v3/Auth/Login`, {
         "login": usr.login,
         "password": usr.pass
     }).then((response) => {
         const token = response.body.accessToken;
-    return token
+        return token
     })
-    
+
 }
 
-Cypress.Commands.add("login", (user) => { 
+function loginToken(usr) {
+    return cy.request('POST', `${webApi}/v3/Auth/Login`, {
+        "login": usr.login,
+        "password": usr.pass
+    }).then((response) => {
+        const token = response.body.accessToken;
+        const refreshToken = response.body.refreshToken;
+
+        localStorage.setItem('jwt', token);
+        localStorage.setItem('refreshToken', refreshToken);
+
+
+    })
+
+}
+
+Cypress.Commands.add("login", (user) => {
     cy.visit("/")
     cy.get('input[type="text"]').type(user.login)
     cy.get('input[type="password"]').type(user.pass)
     cy.get('button[data-field="submit"]').click()
- });
+    cy.wait(2000)
+});
 
- Cypress.Commands.add("getWebApiToken", getToken);
+
+Cypress.Commands.add("getWebApiToken", getToken);
+
+Cypress.Commands.add("loginToken", loginToken);

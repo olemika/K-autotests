@@ -2,13 +2,16 @@ import { sub } from 'date-fns';
 const webApi = Cypress.env('webApi');
 const admin = Cypress.env('mainOrgAdmin');
 const today = new Date();
+const reportCode = 'EmployeePeriodGranularityReport';
+import {getTemplateIdQuery} from "../../../../../fixtures/queries";
+let code;
 
 //Пользователи - детальный отчёт за период
 describe('Create reports ("EmployeePeriodGranularityReport" template)', {
-    retries: {
-        runMode: 1,
-        openMode: 1,
-    }
+    // retries: {
+    //     runMode: 1,
+    //     openMode: 1,
+    // }
 }, () => {
     let newToken;
 
@@ -19,7 +22,11 @@ describe('Create reports ("EmployeePeriodGranularityReport" template)', {
             .then((result) => {
                 return newToken = result;
             })
+        cy.task('queryDatabase', getTemplateIdQuery(reportCode)).then(res => {
 
+            code = res[0]['Id'];
+
+        })
     })
 
     it("Create standart report (EmployeePeriodGranularityReport, DAYS)", () => {
@@ -34,7 +41,7 @@ describe('Create reports ("EmployeePeriodGranularityReport" template)', {
             url: `${webApi}/v3/history/create-report`,
             body: {
                 "fileFormat": "xlsx",
-                "template": 9,
+                "template": code,
                 "name": `STANDART-DAYS-${autoName} -  Пользователи - детальный отчёт за период`,
                 "description": `Report created by autotest. From ${monthAgo.toLocaleDateString()} to ${today.toLocaleDateString()}, standard semantics, granularity - days, employees - all`,
                 "grouping": "day",
@@ -94,7 +101,7 @@ describe('Create reports ("EmployeePeriodGranularityReport" template)', {
             url: `${webApi}/v3/history/create-report`,
             body: {
                 "fileFormat": "xlsx",
-                "template": 9,
+                "template": code,
                 "name": `STANDART-WEEKS-${autoName}  - Пользователи - детальный отчёт за период`,
                 "description": `Report created by autotest. From ${monthAgo.toLocaleDateString()} to ${today.toLocaleDateString()}, standard semantics, granularity - weeks, employees - all`,
                 "grouping": "week",
@@ -154,7 +161,7 @@ describe('Create reports ("EmployeePeriodGranularityReport" template)', {
             url: `${webApi}/v3/history/create-report`,
             body: {
                 "fileFormat": "xlsx",
-                "template": 9,
+                "template": code,
                 "name": `STANDART-MONTHS-${autoName}  - Пользователи - детальный отчёт за период`,
                 "description": `Report created by autotest. From ${yearAgo.toLocaleDateString()} to ${today.toLocaleDateString()}, standard semantics, granularity - months, employees - all`,
                 "grouping": "month",
@@ -216,7 +223,7 @@ describe('Create reports ("EmployeePeriodGranularityReport" template)', {
             url: `${webApi}/v3/history/create-report`,
             body: {
                 "fileFormat": "xlsx",
-                "template": 9,
+                "template": code,
                 "name": `STANDART-HOURS-${autoName}  - Пользователи - детальный отчёт за период`,
                 "description": `Report created by autotest. From ${twoDaysAgo.toLocaleDateString()} to ${today.toLocaleDateString()}, standard semantics, granularity - hours, employees - all`,
                 "grouping": "hour",
@@ -278,7 +285,7 @@ describe('Create reports ("EmployeePeriodGranularityReport" template)', {
             url: `${webApi}/v3/history/create-report`,
             body: {
                 "fileFormat": "xlsx",
-                "template": 9,
+                "template": code,
                 "name": `STANDART-MINUTES-${autoName}  - Пользователи - детальный отчёт за период`,
                 "description": `Report created by autotest. From ${dayAgo.toLocaleDateString()} to ${today.toLocaleDateString()}, standard semantics, granularity - minutes, employees - all`,
                 "grouping": "minute",

@@ -36,18 +36,20 @@ describe("Check the correctness of the data", function () {
     let requireMaintenanceCount;
 
     before(() => {
-        cy.getWebApiToken(admin)
+       cy.getWebApiToken(admin)
             .then((result) => {
                 return newToken = result;
-            })
-        cy.login(admin);
+            }) 
+            cy.loginToken(admin)
+            cy.visit(`${admin.accountId}/dashboard`)
     })
 
 
     it("Check the number of users", function () {
         cy.task('queryDatabase', usersQuery)
             .then(val => {
-                userCount = val.rowsAffected[0]
+
+                userCount = val.length
 
                 cy.get('span[data-field="employees-total-value"]')
                     .invoke('text')
@@ -66,7 +68,7 @@ describe("Check the correctness of the data", function () {
 
         cy.task('queryDatabase', totalDevicesQuery)
             .then(val => {
-                deviceCount = val.rowsAffected[0]
+                deviceCount = val.length
 
                 cy.xpath('//*[@id="app-grid"]/div/div/div/section[1]/div/div[1]/button/span[1]/div/ul/li[3]/ul/li[2]/span').then(($span) => {
                     const text = $span.text();
@@ -193,7 +195,7 @@ describe("Check the correctness of the data", function () {
             })
     })
 
-    it("Checking the number of prints (all time)", function () {
+    it.skip("Checking the number of prints (all time)", function () { //skip пока не починят подсчет
 
         cy.xpath('/html/body/div[2]/div/div/div/div/section[3]/div/div[1]/span')
             .click()
@@ -228,7 +230,7 @@ describe("Check the correctness of the data", function () {
         })
     })
 
-    it("Checking price of prints (all time)", function () {
+    it.skip("Checking price of prints (all time)", function () { //skip пока не починят подсчет
 
         let blackTotalPrice;
         let averagePrice;

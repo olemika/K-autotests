@@ -1,77 +1,8 @@
+
 const admin = Cypress.env('mainOrgAdmin');
 const webApi = Cypress.env('webApi');
 
-const totalDevicesQuery = `SELECT * FROM LogicDevicePoints ldp JOIN Agents a ON a.Id = ldp.AgentId 
-WHERE a.AccountId = ${admin.accountId} 
-AND a.Disabled=0 
-AND a.Deleted=0 
-AND ldp.Disabled=0
-AND ldp.Deleted=0`;
-
-const deviceNamesDB = `SELECT ldp.id, ISNULL(NULLIF(ds.Value, ''), ' ') AS Value, s.Name
-FROM LogicDevicePoints ldp 
-LEFT OUTER JOIN (SELECT * FROM  DeviceStates  WHERE  SemanticId = 'AC142B83-2EC7-4714-ABE0-97D22F6F9A1E') ds  ON ldp.Id = ds.LogicDevicePointId
-LEFT OUTER  JOIN Semantics s ON s.id = ds.SemanticId
-LEFT OUTER  JOIN Agents a ON a.Id = ldp.AgentId
-WHERE ldp.Deleted=0 AND ldp.Disabled=0
-AND a.Deleted=0
-AND a.AccountId=${admin.accountId}
-AND ds.Reliability=1
-ORDER BY ds.Value`
-
-const directionQuery = `SELECT ldp.id, ISNULL(ds.Value, ' ') AS Value
-FROM LogicDevicePoints ldp 
-LEFT OUTER JOIN (SELECT * FROM  DeviceStates  WHERE  SemanticId = '66CE66FF-E3A3-4D02-AB81-3BE3518EB450') ds  ON ldp.Id = ds.LogicDevicePointId
-LEFT OUTER  JOIN Semantics s ON s.id = ds.SemanticId
-LEFT OUTER  JOIN Agents a ON a.Id = ldp.AgentId
-WHERE ldp.Deleted=0 AND ldp.Disabled=0
-AND a.AccountId=${admin.accountId}
-AND a.Deleted=0
-ORDER BY ds.Value`
-
-const groupsQuery = `SELECT Name
-FROM DeviceGroups 
-WHERE AccountId = ${admin.accountId} `
-
-const ipAdressQuery = `SELECT ldp.id, ds.Value AS Value, s.Name
-FROM LogicDevicePoints ldp 
-LEFT OUTER JOIN (SELECT * FROM  DeviceStates  WHERE  SemanticId = '40EB7178-7EAF-48F4-AC2A-6DD1052A1EFB' ) ds  ON ldp.Id = ds.LogicDevicePointId
-LEFT OUTER  JOIN Semantics s ON s.id = ds.SemanticId
-LEFT OUTER  JOIN Agents a ON a.Id = ldp.AgentId
-WHERE ldp.Deleted=0 AND ldp.Disabled=0
-AND a.AccountId=${admin.accountId}
-AND a.Deleted=0
-AND ds.Reliability=1
-ORDER BY ds.Value`
-
-const tonerQuery = ` SELECT ldp.id, ISNULL(ds.Value, 0) AS Value 
-FROM LogicDevicePoints ldp 
-LEFT OUTER JOIN (SELECT LogicDevicePointId, MIN(CONVERT(INT, Value)) AS Value FROM  DeviceStates  WHERE ColumnId=4 GROUP BY LogicDevicePointId) ds  ON ldp.Id = ds.LogicDevicePointId
-LEFT OUTER  JOIN Agents a ON a.Id = ldp.AgentId
-WHERE ldp.Deleted=0 AND ldp.Disabled=0
-AND a.AccountId=${admin.accountId}
-AND a.Deleted=0
-ORDER BY ds.Value`
-
-const groupNameQuery = `SELECT ldp.id, ISNULL(ds.Value, ' ') AS Value, s.Name
-FROM LogicDevicePoints ldp 
-LEFT OUTER JOIN (SELECT * FROM  DeviceStates  WHERE  SemanticId = '3AE30C7E-5A0C-4E99-B895-08D6E8F10CC0' AND Reliability=1) ds  ON ldp.Id = ds.LogicDevicePointId
-LEFT OUTER  JOIN Semantics s ON s.id = ds.SemanticId
-LEFT OUTER  JOIN Agents a ON a.Id = ldp.AgentId
-WHERE ldp.Deleted=0 AND ldp.Disabled=0
-AND a.AccountId=${admin.accountId}
-AND a.Deleted=0
-ORDER BY ds.Value`
-
-const extraQuery = `SELECT ldp.id, ISNULL(ds.Value, ' ') AS Value, s.Name
-FROM LogicDevicePoints ldp 
-LEFT OUTER JOIN (SELECT * FROM  DeviceStates  WHERE  SemanticId = 'A87960EB-D098-4134-B896-08D6E8F10CC0') ds  ON ldp.Id = ds.LogicDevicePointId
-LEFT OUTER  JOIN Semantics s ON s.id = ds.SemanticId
-LEFT OUTER  JOIN Agents a ON a.Id = ldp.AgentId
-WHERE ldp.Deleted=0 AND ldp.Disabled=0
-AND a.AccountId=${admin.accountId}
-AND a.Deleted=0
-ORDER BY ds.Value`
+import * as queries from "../../../fixtures/queries";
 
 function MySort(alphabet) {
     return function (a, b) {
@@ -121,22 +52,34 @@ function compareNumbers(a, b) {
     return a - b;
 }
 
-describe("Check sort", function () {
+describe("Check sort", {
+    retries: {
+        runMode: 2,
+        openMode: 2,
+    }
+}, function () {
    
-    before(() => {
+    beforeEach(() => {
    
         cy.loginToken(admin)
         cy.visit(`${admin.accountId}/monitoring/devices/`)
+        cy.wait(2000)
+        cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/button', {timeout: 10000}).click({force: true})
+    })
+
+    afterEach(() => {
+        cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/button', {timeout: 10000}).click({force: true})
     })
 
     it("Check groups names", function () {
         let deviceGroups = new Set();
 
-        cy.task('queryDatabase', groupsQuery)
+        cy.task('queryDatabase', queries.groupsQuery)
             .then((res) => {
 
-                for (let i = 0; i < res.rowsAffected[0]; i++) {
-                    deviceGroups.add(res.recordset[i].Name)
+                for (let i = 0; i < res.length; i++) {
+                    deviceGroups.add(res[i]['Name'])
+                    console.log('res[i][name]' + res[i]['Name'])
                 }
 
                 deviceGroups.forEach(function (value) {
@@ -161,7 +104,7 @@ describe("Check sort", function () {
         //descending 
         cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[1]/button').click();
         cy.wait(2000);
-        cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[1]/button/span[2]')
+        cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[1]/button/span[2]', {timeout: 5000})
             .should('have.attr', 'data-value', 'desc');
             
         cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/div[2]')
@@ -178,10 +121,10 @@ describe("Check sort", function () {
                 }
 
 
-                cy.task('queryDatabase', deviceNamesDB).then((val) => {
+                cy.task('queryDatabase', queries.deviceNamesDB).then((val) => {
                     let sameLength = []
-                    for (let i = 0; i < val.recordset.length; i++) {
-                        deviceNamesDBvalues.push(val.recordset[i]['Value'])
+                    for (let i = 0; i < val.length; i++) {
+                        deviceNamesDBvalues.push(val[i]['value'])
                     }
                     deviceNamesDBvalues.reverse();
                     for (let i = 0; i < deviceNames.length; i++) {
@@ -195,6 +138,8 @@ describe("Check sort", function () {
     })
 
     it("Sorting by device's names asc", () => {
+        cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[1]/button').click();
+        cy.wait(2000);
         cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[1]/button').click();
         cy.wait(2000);
         cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[1]/button/span[2]')
@@ -215,10 +160,10 @@ describe("Check sort", function () {
                     }  
                 }
 
-                cy.task('queryDatabase', deviceNamesDB).then((val) => {
+                cy.task('queryDatabase', queries.deviceNamesDB).then((val) => {
                     let sameLength = []
-                    for (let i = 0; i < val.recordset.length; i++) {
-                        deviceNamesDBvalues.push(val.recordset[i]['Value'])
+                    for (let i = 0; i < val.length; i++) {
+                        deviceNamesDBvalues.push(val[i]['value'])
                     }
 
                     for (let i = 0; i < deviceNames.length; i++) {
@@ -228,7 +173,6 @@ describe("Check sort", function () {
                 })
 
             })
-        cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/button').click();
     })
 
     it('Sorting by ip address desc', () => {
@@ -256,13 +200,13 @@ describe("Check sort", function () {
                             }
                         }
 
-                        cy.task('queryDatabase', ipAdressQuery)
+                        cy.task('queryDatabase', queries.ipAdressQuery)
                             .then((val) => {
                                 let sameLength = [];
-                                console.log(val.recordset.length)
-                                for (let i = 0; i < val.recordset.length; i++) {
-                                    if (val.recordset[i]['Value']) {
-                                        ipAdressesDB.push(val.recordset[i]['Value'])
+                                console.log(val.length)
+                                for (let i = 0; i < val.length; i++) {
+                                    if (val[i]['value']) {
+                                        ipAdressesDB.push(val[i]['value'])
                                     }
                                 }
 
@@ -282,7 +226,9 @@ describe("Check sort", function () {
         cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/ul/li[4]/button').click({ force: true }).then(() => {
             cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/ul/li[4]/ul/li[1]/button').click({ force: true });
         })
-
+        cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[2]/button')
+            .click()
+            cy.wait(2000)
         cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[2]/button')
             .click().then(() => {
                 cy.wait(2000)
@@ -303,13 +249,13 @@ describe("Check sort", function () {
 
                         }
 
-                        cy.task('queryDatabase', ipAdressQuery)
+                        cy.task('queryDatabase', queries.ipAdressQuery)
                             .then((val) => {
                                 
                                 let sameLength = [];
-                                for (let i = 0; i < val.recordset.length; i++) {
-                                    if (val.recordset[i]['Value']) {
-                                        ipAdressesDB.push(val.recordset[i]['Value'])
+                                for (let i = 0; i < val.length; i++) {
+                                    if (val[i]['value']) {
+                                        ipAdressesDB.push(val[i]['value'])
                                     }
                                 }
                                 ipAdressesDB.sort(compareIPAddresses);
@@ -319,8 +265,7 @@ describe("Check sort", function () {
                                 expect(sameLength.join(';')).to.equal(ipAdressesFront.join(';'))
                             })
 
-                        cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/button')
-                            .click();
+                      
                     })
             })
 
@@ -350,13 +295,13 @@ describe("Check sort", function () {
                         }
                         console.log('directionsFront ' + directionsFront)
                         console.log("kids length =", kids.length)
-                        cy.task('queryDatabase', directionQuery)
+                        cy.task('queryDatabase', queries.directionQuery)
                             .then((val) => {
                                 let directionsDB = new Array();
                                 let sameLength = [];
                                 console.log(val)
-                                for (let i = 0; i < val.recordset.length; i++) {
-                                    directionsDB.push(val.recordset[i]['Value'])
+                                for (let i = 0; i < val.length; i++) {
+                                    directionsDB.push(val[i]['value'])
                                 }
                                 directionsDB.reverse();
                                 for (let i = 0; i < directionsFront.length; i++) {
@@ -375,8 +320,9 @@ describe("Check sort", function () {
         cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/ul/li[4]/button').click({ force: true }).then(() => {
             cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/ul/li[4]/ul/li[1]/button').click({ force: true });
         })
-
-
+        cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[3]/button')
+            .click()
+            cy.wait(2000)
         cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[3]/button')
             .click()
             .then(() => {
@@ -393,13 +339,13 @@ describe("Check sort", function () {
                         }
                         console.log('directionsFront ' + directionsFront)
                         console.log("kids length =", kids.length)
-                        cy.task('queryDatabase', directionQuery)
+                        cy.task('queryDatabase', queries.directionQuery)
                             .then((val) => {
                                 let directionsDB = new Array();
                                 let sameLength = [];
                                 console.log(val)
                                 for (let i = 0; i < kids.length; i++) {
-                                    directionsDB.push(val.recordset[i]['Value'])
+                                    directionsDB.push(val[i]['value'])
                                 }
                                 
                                 for (let i = 0; i < directionsFront.length; i++) {
@@ -408,8 +354,7 @@ describe("Check sort", function () {
                                 expect(directionsFront.join(';')).to.equal(sameLength.join(';'))
                             })
 
-                        cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/button')
-                            .click();
+                        
                     })
             })
 
@@ -429,11 +374,11 @@ describe("Check sort", function () {
                 .should('have.attr', 'data-value', 'desc')
         })
 
-        cy.task('queryDatabase', tonerQuery).then((val) => {
+        cy.task('queryDatabase', queries.tonerQuery).then((val) => {
 
 
-            for (let i = 0; i < val.recordset.length; i++) {
-                minTonerDB.push(val.recordset[i]['Value'])
+            for (let i = 0; i < val.length; i++) {
+                minTonerDB.push(val[i]['value'])
             }
             minTonerDB.sort(compareNumbers);
             minTonerDB.reverse();
@@ -478,15 +423,17 @@ describe("Check sort", function () {
 
         cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[4]/button').click().then(() => {
             cy.wait(2000)
+            cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[4]/button').click()
+            cy.wait(2000)
             cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[4]/button/span[2]')
                 .should('have.attr', 'data-value', 'asc')
         })
 
-        cy.task('queryDatabase', tonerQuery).then((val) => {
+        cy.task('queryDatabase', queries.tonerQuery).then((val) => {
 
 
-            for (let i = 0; i < val.recordset.length; i++) {
-                minTonerDB.push(val.recordset[i]['Value'])
+            for (let i = 0; i < val.length; i++) {
+                minTonerDB.push(val[i]['value'])
             }
             minTonerDB.sort(compareNumbers);
             console.log(minTonerDB)
@@ -520,8 +467,7 @@ describe("Check sort", function () {
 
             })
 
-        cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/button')
-            .click();
+
     })
 
 
@@ -547,10 +493,10 @@ describe("Check sort", function () {
                         groupNamesFront.push(kids[i].querySelectorAll('div[data-cell="plain"]')[0].querySelector('p').innerText)
                     }
 
-                    cy.task('queryDatabase', groupNameQuery).then((val) => {
+                    cy.task('queryDatabase', queries.groupNameQuery).then((val) => {
                         let sameLength = []
-                        for (let i = 0; i < val.recordset.length; i++) {
-                            groupNamesDB.push(val.recordset[i]['Value'])
+                        for (let i = 0; i < val.length; i++) {
+                            groupNamesDB.push(val[i]['value'])
                         }
                         console.log("before ", groupNamesDB)
                         groupNamesDB.reverse();
@@ -579,6 +525,8 @@ describe("Check sort", function () {
 
         cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[6]/button').click().then(() => {
             cy.wait(2000)
+            cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[6]/button').click()
+            cy.wait(2000)
             cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[6]/button/span[2]')
                 .should('have.attr', 'data-value', 'asc')
 
@@ -589,10 +537,10 @@ describe("Check sort", function () {
 
                         groupNamesFront.push(kids[i].querySelectorAll('div[data-cell="plain"]')[0].querySelector('p').innerText)
                     }
-                    cy.task('queryDatabase', groupNameQuery).then((val) => {
+                    cy.task('queryDatabase', queries.groupNameQuery).then((val) => {
 
                         for (let i = 0; i < kids.length; i++) {
-                            groupNamesDB.push(val.recordset[i]['Value'])
+                            groupNamesDB.push(val[i]['value'])
                         }
 
                         expect(groupNamesDB.join(";")).to.equal(groupNamesFront.join(";"))
@@ -601,8 +549,7 @@ describe("Check sort", function () {
                 })
         })
 
-        cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/button')
-            .click();
+   
     })
 
 
@@ -628,10 +575,10 @@ describe("Check sort", function () {
                         extrasFront.push(kids[i].querySelectorAll('div[data-cell="two-rows"]')[2].querySelector('p').innerText)
                     }
     
-                    cy.task('queryDatabase', extraQuery).then((val) => {
+                    cy.task('queryDatabase', queries.extraQuery).then((val) => {
                         let sameLength = []
-                        for (let i = 0; i < val.recordset.length; i++) {
-                            extrasDB.push(val.recordset[i]['Value'])
+                        for (let i = 0; i < val.length; i++) {
+                            extrasDB.push(val[i]['value'])
                         }
                         extrasDB.reverse();
                         for (let i = 0; i < kids.length; i++) {
@@ -647,6 +594,7 @@ describe("Check sort", function () {
 
 
     it("Sorting by extras names asc", () => {
+        
         let extrasDB = [];
         let extrasFront = [];
 
@@ -656,6 +604,8 @@ describe("Check sort", function () {
             })
         
         cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[5]/button').click().then(() => {
+            cy.wait(2000)
+            cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[5]/button').click()
             cy.wait(2000)
             cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[5]/button/span[2]')
                 .should('have.attr', 'data-value', 'asc')
@@ -667,10 +617,10 @@ describe("Check sort", function () {
 
                     extrasFront.push(kids[i].querySelectorAll('div[data-cell="two-rows"]')[2].querySelector('p').innerText)
                 }
-                cy.task('queryDatabase', extraQuery).then((val) => {
+                cy.task('queryDatabase', queries.extraQuery).then((val) => {
 
                     for (let i = 0; i < kids.length; i++) {
-                        extrasDB.push(val.recordset[i]['Value'])
+                        extrasDB.push(val[i]['value'])
                     }
 
                     expect(extrasDB.join(";")).to.equal(extrasFront.join(";"))
@@ -679,75 +629,13 @@ describe("Check sort", function () {
             })
         })
         
-        cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/button')
-            .click();
+        
     })
 
-    // выпилим это?
-    // it("Sorting by state  desc", () => {
-
-    //     let stateFront = [];
-
-    //     cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/ul/li[4]/button').click({ force: true })
-    //         .then(() => {
-    //             cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/ul/li[4]/ul/li[1]/button').click({ force: true });
-    //         })
-
-    //     cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[7]/button').click().then(() => {
-    //         cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[7]/button/span[2]')
-    //             .should('have.attr', 'data-value', 'desc')
-    //     })
-    //     cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/div[2]')
-    //         .children()
-    //         .then((kids) => {
-    //             for (let i = 0; i < kids.length; i++) {
-
-    //                 stateFront.push(kids[i].querySelectorAll('div')[6].querySelector('p').innerText)
-    //             }
-
-    //             let newStates = stateFront.slice();
-
-    //             newStates.sort(sortAsc)
-    //             newStates.reverse();
-
-    //             expect(stateFront.join(";")).to.equal(newStates.join(";"))
-    //         })
-    // })
-
-
-    // it("Sorting by state  asc", () => {
-    //     let stateFront = [];
-
-    //     cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/ul/li[4]/button').click({ force: true })
-    //         .then(() => {
-    //             cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/ul/li[4]/ul/li[1]/button').click({ force: true });
-    //         })
-
-    //     cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[7]/button').click().then(() => {
-    //         cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/header/ul/li[7]/button/span[2]')
-    //             .should('have.attr', 'data-value', 'asc')
-    //     })
-    //     cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/div[2]')
-    //         .children()
-    //         .then((kids) => {
-    //             for (let i = 0; i < kids.length; i++) {
-
-    //                 stateFront.push(kids[i].querySelectorAll('div')[6].querySelector('p').innerText)
-    //             }
-
-    //             let newStates = stateFront.slice();
-
-    //             newStates.sort(sortAsc)
-
-    //             expect(stateFront.join(";")).to.equal(newStates.join(";"))
-
-    //         })
-    //     cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/button')
-    //         .click();
-    // })
-
+   
 
     it("Filter states ", () => {
+        cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/button').click({force: true});
         //Нет данных
         cy.xpath('//*[@id="app-grid"]/div/div')
             .scrollTo('right');
@@ -788,8 +676,8 @@ describe("Check sort", function () {
 
             expect(isCorrect).to.equal(true)
         })
-        cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/button')
-            .click();
+
+        cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/button').click({force: true});
 
         //доступен
 
@@ -829,9 +717,8 @@ describe("Check sort", function () {
 
             expect(isCorrect).to.equal(true)
         })
-        cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/button')
-            .click();
-
+ 
+        cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/button').click({force: true});
         //Недоступен 
         cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/ul/li[4]/button').click({ force: true })
             .then(() => {
@@ -867,16 +754,15 @@ describe("Check sort", function () {
 
             expect(isCorrect).to.equal(true)
         })
-        cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/button')
-            .click();
 
 
+        cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/button').click({force: true});
         //Требует обслуживания 
         cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/ul/li[4]/button').click({ force: true })
             .then(() => {
                 cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/ul/li[4]/ul/li[1]/button').click({ force: true });
             })
-        cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/div[1]/ul/li[7]/ul/li[1]/button').click().then(() => {
+        cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/div[1]/ul/li[7]/ul/li[1]/button', {timeout: 50000 }).click().then(() => {
             cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/div[1]/ul/li[7]/ul/li[2]/ul/li[4]/button')
                 .click({ force: true })
                 cy.wait(2000)
@@ -906,8 +792,7 @@ describe("Check sort", function () {
 
             expect(isCorrect).to.equal(true)
         })
-        cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/button')
-            .click();
+
     })
 
 })

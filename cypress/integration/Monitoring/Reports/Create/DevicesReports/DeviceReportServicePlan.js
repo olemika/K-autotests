@@ -2,6 +2,9 @@ import { sub } from 'date-fns';
 const webApi = Cypress.env('webApi');
 const admin = Cypress.env('mainOrgAdmin');
 const today = new Date();
+const reportCode = 'DeviceReportServicePlan';
+import {getTemplateIdQuery} from "../../../../../fixtures/queries";
+let code;
 
 //Устройства - планирование обслуживания устройств печати
 describe('Create reports ("DeviceReportServicePlan" template)', {
@@ -20,6 +23,12 @@ describe('Create reports ("DeviceReportServicePlan" template)', {
                 return newToken = result;
             })
 
+        cy.task('queryDatabase', getTemplateIdQuery(reportCode)).then(res => {
+
+            code = res[0]['Id'];
+
+        })
+
     })
 
     it("Create standart report (DeviceReportServicePlan)", () => {
@@ -34,7 +43,7 @@ describe('Create reports ("DeviceReportServicePlan" template)', {
             url: `${webApi}/v3/history/create-report`,
             body: {
                 "fileFormat": "xlsx",
-                "template": 7,
+                "template": code,
                 "name": `STANDART-${autoName} Устройства - планирование обслуживания устройств печати`,
                 "description": `Report created by autotest. From ${monthAgo.toLocaleString()} to ${today.toLocaleString()}, standard (all) semantics, granularity - one value, devices - all`,
                 "grouping": "one",
@@ -62,7 +71,7 @@ describe('Create reports ("DeviceReportServicePlan" template)', {
         }
 
         cy.request(options).then(res => {
-            
+
             expect(res.status).to.equal(200)
             cy.log("Отчет создан")
         })
@@ -72,8 +81,8 @@ describe('Create reports ("DeviceReportServicePlan" template)', {
             .type(`${autoName}{enter}`)
 
         cy.xpath('//*[@id="app-grid"]/div/div/div/div/table/tbody')
-        .children().first().then((el => {
-            expect(el[0].querySelector('strong').innerText).to.contain(autoName);
-        }))
+            .children().first().then((el => {
+                expect(el[0].querySelector('strong').innerText).to.contain(autoName);
+            }))
     })
 })

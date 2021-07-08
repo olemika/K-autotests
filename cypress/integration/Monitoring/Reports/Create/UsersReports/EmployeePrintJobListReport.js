@@ -2,6 +2,9 @@ import { sub } from 'date-fns';
 const webApi = Cypress.env('webApi');
 const admin = Cypress.env('mainOrgAdmin');
 const today = new Date();
+const reportCode = 'EmployeePrintJobListReport';
+import {getTemplateIdQuery} from "../../../../../fixtures/queries";
+let code;
 
 
 describe('Create reports ("EmployeePrintJobListReport" template)', {
@@ -12,14 +15,19 @@ describe('Create reports ("EmployeePrintJobListReport" template)', {
 }, () => {
     let newToken;
 
-    beforeEach(() => {
+    beforeEach(() => { 
+
         cy.loginToken(admin)
 
         cy.getWebApiToken(admin)
             .then((result) => {
                 return newToken = result;
             })
-
+        cy.task('queryDatabase', getTemplateIdQuery(reportCode)).then(res => {
+        
+           code = res[0]['Id'];
+           
+        })
     })
 
     it("Create standart report (EmployeePrintJobListReport) DAYS", () => {
@@ -34,7 +42,7 @@ describe('Create reports ("EmployeePrintJobListReport" template)', {
             url: `${webApi}/v3/history/create-report`,
             body: {
                 "fileFormat": "xlsx",
-                "template": 23,
+                "template": code,
                 "name": `STANDART-DAYS-${autoName} Пользователи - журнал печати`,
                 "description": `Report created by autotest. From ${monthAgo.toLocaleString()} to ${today.toLocaleString()}, standard semantics, granularity - days, employees - all`,
                 "grouping": "day",
@@ -91,7 +99,7 @@ describe('Create reports ("EmployeePrintJobListReport" template)', {
             url: `${webApi}/v3/history/create-report`,
             body: {
                 "fileFormat": "xlsx",
-                "template": 23,
+                "template": code,
                 "name": `STANDART-WEEKS-${autoName} Пользователи - журнал печати`,
                 "description": `Report created by autotest. From ${monthAgo.toLocaleString()} to ${today.toLocaleString()}, standard semantics, granularity - weeks, employees - all`,
                 "grouping": "week",
@@ -148,7 +156,7 @@ describe('Create reports ("EmployeePrintJobListReport" template)', {
             url: `${webApi}/v3/history/create-report`,
             body: {
                 "fileFormat": "xlsx",
-                "template": 23,
+                "template": code,
                 "name": `STANDART-MONTHS-${autoName} Пользователи - журнал печати`,
                 "description": `Report created by autotest. From ${yearAgo.toLocaleString()} to ${today.toLocaleString()}, standard semantics, granularity - months, employees - all`,
                 "grouping": "month",
@@ -203,39 +211,40 @@ describe('Create reports ("EmployeePrintJobListReport" template)', {
         let options = {
             method: 'POST',
             url: `${webApi}/v3/history/create-report`,
-            body: {
-                "fileFormat": "xlsx",
-                "template": 23,
-                "name": `STANDART-HOURS-${autoName} Пользователи - журнал печати`,
-                "description": `Report created by autotest. From ${dayAgo.toLocaleString()} to ${today.toLocaleString()}, standard semantics, granularity - hours, employees - all`,
-                "grouping": "hour",
-                "interval": {
-                    "timeOffsetInMinutes": 180,
+            body:
+              {
+            "fileFormat": "xlsx",
+                "template": code,
+                    "name": `STANDART-HOURS-${autoName} Пользователи - журнал печати`,
+                        "description": `Report created by autotest. From ${dayAgo.toLocaleString()} to ${today.toLocaleString()}, standard semantics, granularity - hours, employees - all`,
+                            "grouping": "hour",
+                                "interval": {
+                "timeOffsetInMinutes": 180,
                     "dateFrom": dayAgo.toISOString(),
-                    "dateTo": today.toISOString(),
+                        "dateTo": today.toISOString(),
                 },
-                "devices": null,
+            "devices": null,
                 "employees": {
-                    "mode": "all",
+                "mode": "all",
                     "groups": null,
-                    "selected": null,
-                    "filters": null
-                },
-                "semantics": ["92380430-a1f2-4d15-ac7d-f1faebea0e90"]
+                        "selected": null,
+                            "filters": null
             },
-            headers: {
+            "semantics": ["92380430-a1f2-4d15-ac7d-f1faebea0e90"]
+        },
+        headers: {
 
-                'AccountId': admin.accountId,
+            'AccountId': admin.accountId,
                 'Authorization': `Bearer ${newToken}`,
-                'Content-Type': 'application / json'
-            }
+                    'Content-Type': 'application / json'
         }
+    }
 
         cy.request(options).then(res => {
 
-            expect(res.status).to.equal(200)
-            cy.log("Отчет создан")
-        })
+        expect(res.status).to.equal(200)
+        cy.log("Отчет создан")
+    })
 
         cy.visit(`${admin.accountId}/monitoring/reports/list/`)
         cy.xpath('//*[@id="app-grid"]/div/div/div/header/ul/li/input')
@@ -250,4 +259,64 @@ describe('Create reports ("EmployeePrintJobListReport" template)', {
             }))
 
     })
+
+
+it("Create standart report (EmployeePrintJobListReport) MINUTES", () => {
+    let dayAgo = sub(today, {
+        days: 1
+    })
+    const autoName = `Auto${Math.floor(Math.random() * 999999)}`
+
+    //Стандартный отчет по неделям, за последний месяц,  все пользователи, XLSX
+    let options = {
+        method: 'POST',
+        url: `${webApi}/v3/history/create-report`,
+        body: {
+            "fileFormat": "xlsx",
+            "template": code,
+            "name": `STANDART-MINUTES-${autoName} Пользователи - журнал печати`,
+            "description": `Report created by autotest. From ${dayAgo.toLocaleString()} to ${today.toLocaleString()}, standard semantics, granularity - minutes, employees - all`,
+            "grouping": "minute",
+            "interval": {
+                "timeOffsetInMinutes": 180,
+                "dateFrom": dayAgo.toISOString(),
+                "dateTo": today.toISOString(),
+            },
+            "devices": null,
+            "employees": {
+                "mode": "all",
+                "groups": null,
+                "selected": null,
+                "filters": null
+            },
+            "semantics": ["92380430-a1f2-4d15-ac7d-f1faebea0e90"]
+        },
+        headers: {
+
+            'AccountId': admin.accountId,
+            'Authorization': `Bearer ${newToken}`,
+            'Content-Type': 'application / json'
+        }
+    }
+
+    cy.request(options).then(res => {
+
+        expect(res.status).to.equal(200)
+        cy.log("Отчет создан")
+
+    })
+
+    cy.visit(`${admin.accountId}/monitoring/reports/list/`)
+    cy.xpath('//*[@id="app-grid"]/div/div/div/header/ul/li/input')
+        .type(`${autoName}{enter}`)
+
+    cy.xpath('//*[@id="app-grid"]/div/div/div/div/table/tbody')
+        .children().first().then((el => {
+            expect(el[0].querySelector('strong').innerText).to.contain(autoName);
+            cy.xpath('//*[@id="app-grid"]/div/div/div/div/table/tbody/tr/td[4]/div/button', { timeout: 600000 * 2.9 })
+                .should('be.visible')
+                .and('not.be.disabled');
+        }))
+
+})
 })

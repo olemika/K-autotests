@@ -2,6 +2,9 @@
 const webApi = Cypress.env('webApi');
 const admin = Cypress.env('mainOrgAdmin');
 const today = new Date();
+const reportCode = 'DeviceStatus';
+import {getTemplateIdQuery} from "../../../../../fixtures/queries";
+let code;
 
 //Устройства - состояние устройств
 describe('Create reports ("DeviceStatus" template)', {
@@ -11,7 +14,7 @@ describe('Create reports ("DeviceStatus" template)', {
     }
 }, () => {
     let newToken;
-
+                   
     beforeEach(() => {
         cy.loginToken(admin)
 
@@ -19,6 +22,13 @@ describe('Create reports ("DeviceStatus" template)', {
             .then((result) => {
                 return newToken = result;
             })
+
+            cy.task('queryDatabase', getTemplateIdQuery(reportCode)).then(res => {
+
+                code = res[0]['Id'];
+    
+            })
+
 
     })
 
@@ -31,7 +41,7 @@ describe('Create reports ("DeviceStatus" template)', {
             url: `${webApi}/v3/history/create-report`,
             body: {
                 "fileFormat": "xlsx",
-                "template": 1,
+                "template": code,
                 "name": `STANDART-${autoName} Устройства - состояние устройств`,
                 "description": `Report created by autotest. Date: ${today.toLocaleString()}, standard (all) semantics, granularity - one value, devices - all`,
                 "grouping": "one",

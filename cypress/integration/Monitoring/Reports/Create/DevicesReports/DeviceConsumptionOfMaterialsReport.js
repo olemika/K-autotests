@@ -2,12 +2,12 @@ import { sub } from 'date-fns';
 const webApi = Cypress.env('webApi');
 const admin = Cypress.env('mainOrgAdmin');
 const today = new Date();
-const reportCode = 'Incidents';
+const reportCode = 'DeviceConsumptionOfMaterials';
 import {getTemplateIdQuery} from "../../../../../fixtures/queries";
 let code;
 
-
-describe('Create reports ("Incidents" template)', {
+//Устройства - расход материалов
+describe('Create reports ("DeviceConsumptionOfMaterials" template)', {
     retries: {
         runMode: 1,
         openMode: 1,
@@ -22,32 +22,29 @@ describe('Create reports ("Incidents" template)', {
             .then((result) => {
                 return newToken = result;
             })
-
             cy.task('queryDatabase', getTemplateIdQuery(reportCode)).then(res => {
 
                 code = res[0]['Id'];
     
             })
 
-            
-
     })
 
-    it("Create standart report (Incidents)", () => {
+    it("Create standart report (DeviceConsumptionOfMaterials)", () => {
         let monthAgo = sub(today, {
             months: 1
         });
         const autoName = `Auto${Math.floor(Math.random() * 99999)}`
 
-        //Стандартный отчет (Одно значение за период), за последний месяц,  все устройства, XLSX
+        //Стандартный отчет по дням, за последний месяц,  все устройства, XLSX
         let options = {
             method: 'POST',
             url: `${webApi}/v3/history/create-report`,
             body: {
                 "fileFormat": "xlsx",
                 "template": code,
-                "name": `STANDART-${autoName} Устройства - инциденты`,
-                "description": `Report created by autotest. From ${monthAgo.toLocaleString()} to ${today.toLocaleString()}, ALL semantics , granularity - one value, devices - all`,
+                "name": `STANDART-${autoName} Устройства - расход материалов`,
+                "description": `Report created by autotest. From ${monthAgo.toLocaleString()} to ${today.toLocaleString()}, standard (all) semantics, granularity - one value, devices - all`,
                 "grouping": "one",
                 "interval": {
                     "timeOffsetInMinutes": 180,
@@ -62,7 +59,7 @@ describe('Create reports ("Incidents" template)', {
                     "filters": null
                 },
                 "employees": null,
-                "semantics": ["a1f1e761-b866-493b-8cda-7faa2e9cb011", "698bbc70-3fc6-46e8-9ccc-f3c137d696b1"]
+                "semantics": ["f9bac9c8-79c4-4948-8b4c-af75b6e0e6f6", "d233b459-eda1-4dfc-ad72-4e18b83b78be", "a4a179ce-f529-4774-a368-9b48103a56a5", "8d6413be-7904-4d1c-b8a9-7d42075fdb31", "56e82788-58eb-4eb2-8c35-f86b813ec30b", "3c229510-2ad9-45ec-92a6-75a2b226774a"]
             },
             headers: {
 

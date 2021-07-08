@@ -3,7 +3,8 @@ const admin = Cypress.env('mainOrgAdmin')
 describe("Check all elements", function () {
 
     before(() => {
-        cy.login(admin);
+        cy.loginToken(admin);
+        cy.visit(`${admin.accountId}/dashboard`);
     })
 
     it("Checking all elements", function () {

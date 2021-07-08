@@ -82,7 +82,6 @@ describe("Check all elements", function () {
 
             cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/footer/ul/li[3]/button')
                 .should('exist')
-                .should('not.be.disabled')
 
             cy.xpath('//*[@id="app-grid"]/div/div/div/div[2]/div[1]/ul/li[7]/ul/li[2]')
                 .should('not.be.visible')
